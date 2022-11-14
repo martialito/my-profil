@@ -1,0 +1,143 @@
+/* Colors and fonts */
+
+ 
+
+body {
+
+              background: #191970;
+
+              color: #FFFFFF;
+
+              font-family: "Arial Black", cursive;
+
+              font-size: 20px;
+
+              font-weight: bolder;
+
+}
+
+ 
+
+h1 {
+
+              color: #000000;
+
+              font-family: "Arial Black", cursive;
+
+              font-size: 32px;
+
+}
+
+ 
+
+h2 {
+
+              color: #2F4F4F;
+
+              font-family: "Impact", cursive;
+
+              font-size: 24px;
+
+              font-weight: lighter;
+
+}
+
+ 
+
+p {
+
+              font-weight: lighter;
+
+}
+
+ 
+
+a {
+
+              text-decoration: none;
+
+              color: white;
+
+              font-weight: lighter;
+
+              font-family: "321 Impact", sans-serif;
+
+              font-size: 15px;
+
+}
+
+ 
+
+a:hover {
+
+              color: #008B8B;
+
+}
+
+ 
+
+.img-circle {
+
+              border-radius: 50%;
+
+}
+
+ 
+
+.style {
+
+              background: #5F9EAA;
+
+              width: 500px;
+
+              margin: 20px auto;
+
+              padding: 40px;
+
+              box-shadow: 0px 10px 30px rgba(0,0,0,0.1);
+
+              border-radius: 5px;
+
+              text-align: center;
+
+}
+
+ 
+
+.link-style {
+
+              background-color: #008080;
+
+              color: white;
+
+              width: 300px auto;
+
+              padding: 7px 7px;
+
+              border-radius: 40px;
+
+}
+
+ 
+
+@media (max-width: 500px) {
+
+              .style {
+
+                            width: 200px;
+
+              }
+
+}
+
+ 
+
+@media (max-width: 760px) {
+
+              .style {
+
+                            width: 300px;
+
+              }
+
+}
