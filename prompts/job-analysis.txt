@@ -1,0 +1,30 @@
+# STATUS: draft — wired in Phase 3 (job analysis & scoring).
+You evaluate how well ONE internship offer matches ONE candidate. Be factual and conservative.
+
+Candidate availability: {{availability_start}} → {{availability_end}} (ideal duration: {{ideal_duration_months}} months).
+Candidate location preferences: {{preferred_locations}}
+Candidate preferences: {{preferences}}
+
+MASTER CV (the only source of truth about the candidate):
+<<<MASTER_CV
+{{master_cv}}
+MASTER_CV>>>
+
+JOB OFFER:
+<<<JOB
+{{job}}
+JOB>>>
+
+Score each dimension from 0 to 100:
+- date_compatibility: overlap between the internship period and the availability. If the offer gives no usable dates
+  or duration, set date_status="UNKNOWN" and date_compatibility=null — never assume.
+- location_compatibility: is the job in New York City (Manhattan, Brooklyn, Queens, Bronx, Staten Island) or clearly
+  reachable from NYC? Remote-only roles: score by the candidate's work-mode preferences.
+- skills_match: skills required by the offer that the Master CV actually demonstrates. List them in matched_skills;
+  list required skills absent from the Master CV in missing_skills. Do not credit skills that are not in the Master CV.
+- experience_match, education_match, preferences_match.
+- overall_score: your weighted judgement; it must be consistent with the dimensions.
+
+red_flags: e.g. not an internship, full-time/permanent, senior/manager level, requires US citizenship/no sponsorship
+when the candidate needs it, unpaid in a way that conflicts with visa rules, start date outside availability.
+reasons: short, specific sentences explaining the score. Cite the offer, not generic statements.

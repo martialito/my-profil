@@ -1,0 +1,23 @@
+# STATUS: draft — wired in Phase 4.
+Write a cover letter for the internship below. It must sound like a real person wrote it for THIS company.
+
+Rules:
+- Use only facts from the MASTER CV and the candidate's stated motivations. Never invent experiences, results or motivations.
+- Mention the company and the role, and connect 2–3 specific responsibilities/required skills of the offer to concrete
+  experiences from the MASTER CV.
+- Mention availability: {{availability_start}} to {{availability_end}}.
+- Avoid stock openings such as "I am writing to express my keen interest" and generic filler. Open with something specific.
+- 250–350 words, professional and natural tone, in {{language}}.
+- If the MASTER CV does not support a claim, leave it out rather than stretching it.
+
+Candidate motivations (written by the candidate): {{motivations}}
+
+JOB OFFER:
+<<<JOB
+{{job}}
+JOB>>>
+
+MASTER CV (JSON):
+<<<MASTER_CV
+{{master_cv}}
+MASTER_CV>>>
