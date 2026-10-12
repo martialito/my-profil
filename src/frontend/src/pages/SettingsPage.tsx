@@ -76,7 +76,7 @@ export function SettingsPage() {
       <Card title="Automation" actions={actions('automation')}>
         {envInfo?.testModeForced && <Notice kind="info">TEST_MODE=true in .env: test mode is forced ON whatever the setting below.</Notice>}
         <div className="grid">
-          <Field label="Application mode">
+          <Field label="Application mode" hint="FULL_AUTO is not activated in this version: it behaves like SEMI_AUTO (your click is always required).">
             <select value={s.automation.applicationMode} onChange={(e) => patch('automation', { applicationMode: e.target.value as Settings['automation']['applicationMode'] })}>
               {ApplicationModes.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -86,7 +86,7 @@ export function SettingsPage() {
           <Field label="Daily automation enabled"><input type="checkbox" checked={s.automation.dailyAutomationEnabled} onChange={(e) => patch('automation', { dailyAutomationEnabled: e.target.checked })} /></Field>
           <Field label="Max applications per day"><input type="number" value={s.automation.maxApplicationsPerDay} onChange={(e) => patch('automation', { maxApplicationsPerDay: num(e.target.value) })} /></Field>
           <Field label="Follow-up after (days)"><input type="number" value={s.automation.followUpDays} onChange={(e) => patch('automation', { followUpDays: num(e.target.value) })} /></Field>
-          <Field label="Test mode (simulate submissions)"><input type="checkbox" checked={s.automation.testMode} onChange={(e) => patch('automation', { testMode: e.target.checked })} /></Field>
+          <Field label="Test mode (simulate submissions)" hint="Real submission needs BOTH: TEST_MODE=false in .env and this switch off."><input type="checkbox" checked={s.automation.testMode} onChange={(e) => patch('automation', { testMode: e.target.checked })} /></Field>
         </div>
       </Card>
 

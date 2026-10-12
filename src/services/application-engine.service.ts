@@ -14,6 +14,8 @@ import { NotificationService } from '../notifications/notification.service.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { AnswerBankService } from './answer-bank.service.js';
+import { ApplicationService } from './application.service.js';
+import { env } from '../config/env.js';
 import { MasterCvService } from './master-cv.service.js';
 import { ProfileService } from './profile.service.js';
 import { SettingsService } from './settings.service.js';
@@ -81,7 +83,7 @@ export class ApplicationEngineService {
     return { resume, letter };
   }
 
-  check(id: number, sim?: { plan?: FillPlan; pageText?: string }): FinalCheck & { summary: Record<string, string | number | null>; mode: ApplicationMode } {
+  check(id: number, sim?: { plan?: FillPlan; pageText?: string }): FinalCheck & { summary: Record<string, string | number | null>; mode: ApplicationMode; submissionBlocker: string | null } {
     const { job } = this.app(id);
     const profile = new ProfileService(this.db).get();
     const { resume, letter } = this.documents(job.id);
@@ -103,6 +105,7 @@ export class ApplicationEngineService {
     return {
       ...res,
       mode: this.effectiveMode(id),
+      submissionBlocker: this.submissionBlocker(id),
       summary: {
         Company: job.company,
         Position: job.title,
@@ -176,6 +179,7 @@ export class ApplicationEngineService {
       simulatedAt: new Date().toISOString(),
       testMode: true,
       submitted: false,
+      digest: result.digest,
       url,
       status: result.status,
       blocker: result.blocker,
@@ -207,12 +211,118 @@ export class ApplicationEngineService {
     }
     logger.info(`Simulation for "${job.title}": ${result.status} (${result.filled.length} field(s) filled, nothing sent)`);
     const { pageText: _t, ...rest } = result;
-    return { result: { ...rest, screenshotUrl: result.screenshotPath ? `/api/applications/${id}/simulation-screenshot/${path.basename(result.screenshotPath)}` : null }, report, check };
+    return { result: { ...rest, screenshotUrl: result.screenshotPath ? `/api/applications/${id}/simulation-screenshot/${path.basename(result.screenshotPath)}` : null }, report, check, submissionBlocker: this.submissionBlocker(id) };
+  }
+
+  /** Why a real submission is not possible right now (null = allowed). */
+  submissionBlocker(id: number): string | null {
+    const { a } = this.app(id);
+    const settings = new SettingsService(this.db).get();
+    if (env().TEST_MODE) return 'TEST_MODE=true in .env: real submission is disabled.';
+    if (settings.automation.testMode) return 'Test mode is ON in Settings: real submission is disabled.';
+    const mode = this.effectiveMode(id);
+    if (mode === 'MANUAL') return 'This offer is in MANUAL mode: open the page and submit it yourself, then confirm in the tracker.';
+    if (a.submittedAt || a.status === 'APPLIED') return 'This application has already been submitted.';
+    if (['REJECTED', 'WITHDRAWN', 'INTERVIEW', 'OFFER'].includes(a.status)) return `This application is ${a.status}.`;
+    const limit = this.dailyLimit();
+    if (limit.submittedToday >= limit.max) return `Daily limit reached (${limit.submittedToday}/${limit.max}). Try again tomorrow.`;
+    return null;
+  }
+
+  /**
+   * REAL submission (Phase 7, SEMI_AUTO): only after your explicit click, with the digest of the simulation you reviewed.
+   * The page is re-opened and re-filled; the button is clicked only if everything is identical and the final check passes.
+   * APPLIED is recorded only when the website confirms the submission.
+   */
+  async submit(id: number, opts: { expectedDigest: string; answers?: Record<string, string> }) {
+    const blocker = this.submissionBlocker(id);
+    if (blocker) throw new AppError(blocker, 409, 'SUBMISSION_NOT_ALLOWED');
+    const { a, job } = this.app(id);
+    const settings = new SettingsService(this.db).get();
+    const profile = new ProfileService(this.db).get();
+    const { resume, letter } = this.documents(job.id);
+    if (!resume || !letter) throw new AppError('Generate the CV and the cover letter first.', 409, 'SUBMISSION_NOT_ALLOWED');
+    const dir = path.join(paths.generated(), 'applications', String(job.id));
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+
+    logger.info(`SUBMISSION started for "${job.title}" at ${job.company} (your click)`);
+    const result = await simulateApplication({
+      url: job.applicationUrl ?? job.sourceUrl,
+      screenshotPath: path.join(dir, `submit-${stamp}-before.png`),
+      plan: (fields) =>
+        planForm(fields, { profile, bank: new AnswerBankService(this.db).effectiveEntries(), resumePath: abs(resume.pdfPath), coverLetterPath: abs(letter.pdfPath), coverLetterText: letter.content, userAnswers: opts.answers }),
+      options: {
+        headless: settings.browser.headless,
+        persistentProfileDir: settings.browser.persistentProfile ? paths.browserProfile() : undefined,
+        slowMoMs: settings.browser.slowMoMs,
+        timeoutMs: settings.browser.timeoutSeconds * 1000,
+      },
+      submit: {
+        expectedDigest: opts.expectedDigest,
+        afterScreenshotPath: path.join(dir, `submit-${stamp}-after.png`),
+        beforeClick: (plan, pageText) => {
+          const c = this.check(id, { plan, pageText });
+          const failed = c.items.filter((i) => i.status === 'fail' || i.status === 'pending');
+          return failed.length ? `Final check failed: ${failed.map((f) => `${f.label} (${f.detail})`).join('; ')}` : null;
+        },
+      },
+    });
+
+    const proof = {
+      attemptedAt: new Date().toISOString(),
+      status: result.status,
+      abortReason: result.abortReason,
+      error: result.error,
+      blocker: result.blocker,
+      digest: result.digest,
+      submission: result.submission,
+      filled: result.filled,
+      resume: resume.pdfPath,
+      coverLetter: letter.pdfPath,
+    };
+    fs.writeFileSync(path.join(dir, `submit-${stamp}.json`), JSON.stringify(proof, null, 2), { mode: 0o600 });
+    const notifier = new NotificationService(this.db);
+    let application;
+
+    if (result.status === 'submitted' && result.submission) {
+      application = new ApplicationService(this.db).recordSiteSubmission(id, {
+        confirmationText: result.submission.outcome.evidence,
+        confirmationUrl: result.submission.confirmationUrl,
+        screenshotPath: result.submission.afterScreenshotPath ? path.relative(process.cwd(), result.submission.afterScreenshotPath) : undefined,
+      });
+      notifier.notify({ type: 'submitted', level: 'info', title: `Application sent: ${job.title} at ${job.company}`, message: `Confirmed by the website: "${result.submission.outcome.evidence}"`, link: `/tracker?app=${id}`, dedupeKey: `submitted:${id}` });
+    } else {
+      this.db
+        .insert(applicationEvents)
+        .values({
+          applicationId: a.id,
+          type: 'submission_attempt',
+          message:
+            result.status === 'aborted' ? `Submission NOT sent: ${result.abortReason}`
+            : result.status === 'form_errors' ? `Submit clicked but the website reported errors: ${result.submission?.outcome.evidence}`
+            : result.status === 'unconfirmed' ? 'Submit clicked but no confirmation was detected: check the website or your e-mail, then confirm manually in the tracker.'
+            : `Submission NOT sent: ${result.blocker?.detail ?? result.error ?? result.status}`,
+          data: { status: result.status },
+        })
+        .run();
+      notifier.notify({
+        type: 'application_attention',
+        level: 'action_required',
+        title: `Application for ${job.title} at ${job.company} requires your attention`,
+        message: result.status === 'unconfirmed' ? 'The submit button was clicked but the site did not confirm. Check your e-mail or the site; the application is NOT marked as applied.' : result.status === 'form_errors' ? 'The site rejected the form. Nothing was confirmed.' : `Not submitted: ${result.abortReason ?? result.blocker?.detail ?? result.error}`,
+        link: `/jobs/${job.id}`,
+        dedupeKey: `submit:${a.id}:${stamp}`,
+      });
+    }
+    logger.info(`SUBMISSION for "${job.title}": ${result.status}`);
+    const { pageText: _t, ...rest } = result;
+    return { result: rest, application: application ?? new ApplicationService(this.db).get(id) };
   }
 
   screenshot(id: number, file: string): string {
     const { job } = this.app(id);
-    if (!/^simulation-[\w-]+\.png$/.test(file)) throw new NotFoundError('Screenshot');
+    if (!/^(simulation|submit)-[\w-]+\.png$/.test(file)) throw new NotFoundError('Screenshot');
     const p = path.join(paths.generated(), 'applications', String(job.id), file);
     if (!fs.existsSync(p)) throw new NotFoundError('Screenshot');
     return p;

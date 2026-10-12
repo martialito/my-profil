@@ -3,7 +3,8 @@ import path from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import type { FillPlan, FormField, FieldType } from '../application/form-plan.js';
 import { env } from '../config/env.js';
-import { detectBlockersInPage, detectFieldsInPage, findSubmitInPage, pageTextInPage, readValueInPage, type Blocker, type RawField } from './page-scripts.js';
+import crypto from 'node:crypto';
+import { detectBlockersInPage, detectFieldsInPage, detectOutcomeInPage, findSubmitInPage, pageTextInPage, readValueInPage, type Blocker, type RawField, type SubmissionOutcome } from './page-scripts.js';
 
 /**
  * Controlled browser for application pages (section 11).
@@ -29,7 +30,12 @@ export interface FilledField {
 }
 
 export interface SimulationResult {
-  status: 'blocked' | 'needs_input' | 'simulated' | 'error';
+  status: 'blocked' | 'needs_input' | 'simulated' | 'error' | 'aborted' | 'submitted' | 'form_errors' | 'unconfirmed';
+  /** Fingerprint of exactly what was filled (labels + values read back). Submission requires the one you reviewed. */
+  digest?: string;
+  /** Set only when the submit button was actually clicked. */
+  submission?: { clickedAt: string; outcome: SubmissionOutcome; confirmationUrl: string; afterScreenshotPath?: string };
+  abortReason?: string;
   url: string;
   finalUrl?: string;
   blocker?: Blocker;
@@ -93,11 +99,28 @@ async function applyItem(page: Page, field: FormField & { optionIds: string[] },
   }
 }
 
+export function fillDigest(filled: FilledField[]): string {
+  const canonical = filled.map((f) => [f.label, f.actual]).sort((a, b) => a[0]!.localeCompare(b[0]!));
+  return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Real submission parameters (Phase 7). The button is clicked ONLY if every guard passes:
+ * complete plan, every value read back identical, same digest as the one you reviewed, and the final check.
+ */
+export interface SubmitGuard {
+  expectedDigest: string;
+  /** Final check computed on the live page; must return null to allow the click, or the reason to abort. */
+  beforeClick: (plan: FillPlan, pageText: string) => string | null;
+  afterScreenshotPath: string;
+}
+
 export async function simulateApplication(params: {
   url: string;
   plan: (fields: FormField[]) => FillPlan;
   screenshotPath: string;
   options: BrowserOptions;
+  submit?: SubmitGuard;
 }): Promise<SimulationResult> {
   const started = Date.now();
   const result: SimulationResult = { status: 'error', url: params.url, fields: [], filled: [], durationMs: 0 };
@@ -142,10 +165,37 @@ export async function simulateApplication(params: {
     }
 
     result.submitButton = await inPage(page, findSubmitInPage);
+    result.digest = fillDigest(result.filled);
     fs.mkdirSync(path.dirname(params.screenshotPath), { recursive: true });
     await page.screenshot({ path: params.screenshotPath, fullPage: true });
     result.screenshotPath = params.screenshotPath;
     result.status = plan.complete ? 'simulated' : 'needs_input';
+    if (!params.submit || result.status !== 'simulated') return result;
+
+    // ── Phase 7: guarded real submission ──
+    const abort = (reason: string) => {
+      result.status = 'aborted';
+      result.abortReason = reason;
+      return result;
+    };
+    if (!result.submitButton) return abort('No submit button found on the page.');
+    if (result.filled.some((f) => !f.verified)) return abort('A field did not keep the intended value (read-back check failed).');
+    if (result.digest !== params.submit.expectedDigest) return abort('The form or the values changed since you reviewed the simulation: please review again.');
+    const blockedNow = await inPage(page, detectBlockersInPage);
+    if (blockedNow) return abort(blockedNow.detail);
+    const guard = params.submit.beforeClick(plan, await inPage(page, pageTextInPage));
+    if (guard) return abort(guard);
+
+    const clickedAt = new Date().toISOString();
+    await page.locator('[data-nia-submit="1"]').first().click();
+    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
+    await page.waitForTimeout(1500);
+    const after = await inPage(page, detectBlockersInPage);
+    const outcome: SubmissionOutcome = after ? { kind: 'unconfirmed', evidence: after.detail } : await inPage(page, detectOutcomeInPage);
+    await page.screenshot({ path: params.submit.afterScreenshotPath, fullPage: true }).catch(() => undefined);
+    result.submission = { clickedAt, outcome, confirmationUrl: page.url(), afterScreenshotPath: params.submit.afterScreenshotPath };
+    result.finalUrl = page.url();
+    result.status = outcome.kind === 'confirmed' ? 'submitted' : outcome.kind === 'form_errors' ? 'form_errors' : 'unconfirmed';
     return result;
   } catch (err) {
     result.status = 'error';

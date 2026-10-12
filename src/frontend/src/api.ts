@@ -92,10 +92,12 @@ export interface BankEntry { id: number; question: string; aliases: string[]; an
 export interface MatchResult { status: 'matched' | 'needs_confirmation' | 'unanswered' | 'unknown'; entry?: BankEntry; answer?: string; similarity: number; reason: string }
 export interface PlanItem { field: { id: string; label: string; type: string; required: boolean; options: string[] }; status: string; value?: string; source: string; reason: string }
 export interface CheckItem { key: string; label: string; status: 'ok' | 'warning' | 'fail' | 'pending'; detail: string }
-export interface FinalCheckResult { items: CheckItem[]; ready: boolean; cleanForAutomation: boolean; summary: Record<string, string | number | null>; mode: string }
+export interface FinalCheckResult { items: CheckItem[]; ready: boolean; cleanForAutomation: boolean; summary: Record<string, string | number | null>; mode: string; submissionBlocker: string | null }
 export interface SimulationReport {
   result: { status: 'blocked' | 'needs_input' | 'simulated' | 'error'; url: string; finalUrl?: string; blocker?: { kind: string; detail: string }; error?: string; submitButton?: string | null; screenshotUrl: string | null; durationMs: number };
+  submissionBlocker: string | null;
   report: {
+    digest?: string;
     wouldFill: Array<{ label: string; intended: string; actual: string; source: string; verified: boolean }>;
     questionsForYou: Array<{ label: string; type: string; options: string[]; reason: string }>;
     toConfirm: Array<{ label: string; proposed?: string; reason: string }>;
@@ -142,6 +144,8 @@ export const api = {
   finalCheck: (id: number) => call<FinalCheckResult>('GET', `/api/applications/${id}/check`),
   setMode: (id: number, mode: string | null) => call<{ mode: string }>('PUT', `/api/applications/${id}/mode`, { mode }),
   simulate: (id: number, body: { answers?: Record<string, string>; saveToBank?: string[] }) => call<SimulationReport>('POST', `/api/applications/${id}/simulate`, body),
+  submitApplication: (id: number, body: { expectedDigest: string; answers?: Record<string, string> }) =>
+    call<{ result: { status: string; abortReason?: string; error?: string; blocker?: { detail: string }; submission?: { outcome: { kind: string; evidence: string }; confirmationUrl: string } }; application: ApplicationDetail }>('POST', `/api/applications/${id}/submit`, { confirm: true, ...body }),
   simulateDemo: (answers?: Record<string, string>) => call<DemoSimulation>('POST', '/api/demo/simulate', { answers }),
   ungroupJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/ungroup`),
   importJob: (input: ManualJobInput) => call<{ kind: string; id: number; of?: number; warnings: string[] }>('POST', '/api/jobs/manual', input),

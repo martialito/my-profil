@@ -194,3 +194,8 @@ tr.selected td { background: var(--info-bg); }
 .question { border-left: 3px solid var(--warn-fg); padding: 6px 10px; margin: 8px 0; }
 .shot { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin-top: 10px; }
 .value-cell { max-width: 360px; overflow-wrap: anywhere; }
+
+/* Phase 7: submission */
+.danger-box { border-color: var(--danger); }
+button.danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; }
+.submit-btn:not(:disabled) { background: var(--ok-fg); border-color: var(--ok-fg); color: #fff; }

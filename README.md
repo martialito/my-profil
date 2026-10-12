@@ -13,10 +13,9 @@ Il est construit par phases. Ce README décrit ce qui fonctionne **réellement**
 | 4 | CV personnalisé, lettre de motivation | ✅ fait |
 | 5 | Dashboard complet, suivi des candidatures, notifications | ✅ fait |
 | 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ✅ fait |
-| 7 | Envoi réel des candidatures | ⏳ à faire |
+| 7 | Envoi réel des candidatures (SEMI_AUTO, avec votre clic) | ✅ fait |
 
-La commande `apply` existe déjà mais **refuse de s'exécuter**
-(code de sortie 2, « planned for Phase 7 ») : l'envoi réel n'est pas implémenté.
+Toutes les phases sont implémentées. L'envoi réel exige toujours **votre clic** dans l'interface (voir Phase 7).
 
 ## Stack
 
@@ -50,7 +49,7 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 |---|---|
 | `npm run dev` | API (rechargement auto) + interface Vite |
 | `npm run build` / `npm run start` | build de production (`dist/`), puis serveur unique sur le port 3001 qui sert aussi l'interface |
-| `npm run test` | tests (201 tests, dont des tests navigateur réels) |
+| `npm run test` | tests (208 tests, dont des tests navigateur réels) |
 | `npm run lint` | ESLint + vérification TypeScript |
 | `npm run status` | résumé : complétude du profil, version du Master CV, mode, test mode |
 | `npm run db:migrate` | applique les migrations (fait aussi automatiquement au démarrage) |
@@ -60,7 +59,7 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 | `npm run analyze [-- --limit=N]` | analyse avec Claude les offres pas encore analysées (50 max par défaut) |
 | `npm run generate [-- --limit=N]` | génère CV + lettre pour les offres GREEN/YELLOW qui n'en ont pas encore |
 | `npm run dry-run` | recherche → analyse → score → CV → lettre → formulaire simulé ; **n'envoie rien** |
-| `npm run apply` | réservée à la phase 7 (pas implémentée) |
+| `npm run apply` | liste les candidatures préparées et ce qui bloque leur envoi ; **n'envoie rien** (l'envoi se fait par votre clic) |
 
 ## Ce qui fonctionne (Phase 1)
 
@@ -263,7 +262,7 @@ Encadré **APPLICATION READY** (entreprise, poste, lieu, dates, score, CV, lettr
 poste (lus sur la page de candidature), bon lieu, bon CV, bonne lettre, bon candidat, dates, aucun champ obligatoire
 sans réponse, aucune information inventée, aucune réponse contradictoire (Answer Bank vs My Profile), limite quotidienne
 (`maxApplicationsPerDay`). Mode FULL_AUTO / SEMI_AUTO / MANUAL réglable globalement et **par offre**.
-Le bouton *Submit application* est désactivé et l'API d'envoi répond « non implémenté (Phase 7) ».
+
 
 ### Simulation & dry run
 « Simulate application » montre exactement ce qui serait envoyé (champ, valeur, source, vérifié), les questions pour
@@ -271,6 +270,27 @@ vous (avec option « enregistrer dans l'Answer Bank ») et la capture d'écran ;
 `generated/applications/{job_id}/`. Un **formulaire de démonstration** local (`/demo/application-form`, entreprise
 fictive) permet d'essayer le remplissage depuis la page *Answer Bank*. `npm run dry-run` enchaîne toutes les étapes et
 indique honnêtement celles qui sont sautées (pas de board, pas de clé API…).
+
+## Ce qui fonctionne (Phase 7) — envoi réel, uniquement après votre clic
+
+**Activation (double interrupteur)** : `TEST_MODE=false` dans `.env` **et** *Test mode* désactivé dans *Settings*.
+Tant que l'un des deux est actif, l'envoi est refusé par le serveur (pas seulement par l'interface).
+
+**Déroulé (mode SEMI_AUTO)** :
+1. « Simulate application » remplit le formulaire et vous montre exactement ce qui serait envoyé (empreinte `digest`).
+2. « Submit application » n'est cliquable que si la simulation est complète, la vérification finale sans échec, et rien ne
+   bloque (mode, limite quotidienne, déjà envoyée…). Vous confirmez explicitement (« I reviewed… » puis « Yes, submit now »).
+3. Le serveur **rouvre et re-remplit** la page ; il ne clique sur le bouton d'envoi que si : chaque valeur relue est
+   identique, l'empreinte est **la même que celle que vous avez vérifiée**, aucun CAPTCHA/connexion n'est apparu, et la
+   vérification finale (entreprise, poste, CV, lettre, champs obligatoires…) passe sur la page réelle. Sinon : abandon, rien n'est cliqué.
+4. Après le clic : **APPLIED seulement si le site confirme** (« Thank you for applying… », « application received »…).
+   Preuve enregistrée : horodatage, texte et URL de confirmation, captures avant/après, rapport JSON dans
+   `generated/applications/{job_id}/`. Si le site affiche des erreurs ou ne confirme rien : la candidature **n'est pas**
+   marquée envoyée et vous êtes notifié (vous pourrez la confirmer vous-même dans le tracker si vous recevez un e-mail).
+5. Limite quotidienne (`maxApplicationsPerDay`, 20 par défaut) ; une candidature ne peut pas être envoyée deux fois.
+
+**Non activé volontairement** : le mode **FULL_AUTO** (envoi sans clic) se comporte comme SEMI_AUTO ; aucun envoi n'est
+déclenché par une tâche planifiée ou par `npm run apply`. MANUAL : l'envoi automatique est refusé, vous postulez vous-même.
 
 ## Sécurité et données personnelles
 

@@ -112,6 +112,8 @@ export function findSubmitInPage(): string | null {
   const btn =
     candidates.find((b) => /^(submit|apply|send)\b|submit application|apply now|send application/i.test(label(b))) ??
     candidates.find((b) => (b as HTMLButtonElement).type === 'submit');
+  document.querySelectorAll('[data-nia-submit]').forEach((e) => e.removeAttribute('data-nia-submit'));
+  if (btn) btn.setAttribute('data-nia-submit', '1');
   return btn ? label(btn) || 'submit' : null;
 }
 
@@ -131,4 +133,21 @@ export function readValueInPage(id: string): string {
   if (input.type === 'checkbox') return input.checked ? 'Yes' : 'No';
   if (input.type === 'file') return Array.from(input.files ?? []).map((f) => f.name).join(', ');
   return input.value;
+}
+
+export interface SubmissionOutcome {
+  kind: 'confirmed' | 'form_errors' | 'unconfirmed';
+  evidence: string;
+}
+
+/** After clicking submit: did the site confirm the submission, show validation errors, or neither? */
+export function detectOutcomeInPage(): SubmissionOutcome {
+  const text = (document.body?.innerText ?? '').replace(/\s+/g, ' ');
+  const ok = text.match(/(thank(s| you)[^.]{0,80}(appl(y|ying|ication)|submission|interest)[^.]{0,120}\.?|(your )?application (has been |was )?(successfully )?(submitted|received|sent)[^.]{0,120}\.?|we(['’]ve| have) received your application[^.]{0,120}\.?)/i);
+  if (ok) return { kind: 'confirmed', evidence: ok[0].trim().slice(0, 300) };
+  const invalid = Array.from(document.querySelectorAll<HTMLElement>('[aria-invalid="true"], .error, .field-error, .invalid-feedback, [role="alert"]'))
+    .map((e) => (e.innerText ?? '').trim())
+    .filter((t) => t && /required|invalid|please|must|error/i.test(t));
+  if (invalid.length) return { kind: 'form_errors', evidence: invalid.slice(0, 5).join(' | ').slice(0, 300) };
+  return { kind: 'unconfirmed', evidence: text.slice(0, 200) };
 }

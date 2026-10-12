@@ -33,6 +33,9 @@ export function ApplicationPanel({ jobId, applicationUrl }: { jobId: number; app
   const [save, setSave] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [confirming, setConfirming] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
+  const [submitResult, setSubmitResult] = useState<Awaited<ReturnType<typeof api.submitApplication>>>();
 
   useEffect(() => {
     api.applicationByJob(jobId).then((a) => {
@@ -63,6 +66,24 @@ export function ApplicationPanel({ jobId, applicationUrl }: { jobId: number; app
     }
   };
 
+  const submit = async () => {
+    if (!app || !sim?.report.digest) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const r = await api.submitApplication(app.id, { expectedDigest: sim.report.digest, answers });
+      setSubmitResult(r);
+      setApp(r.application);
+      setConfirming(false);
+      setCheck(await api.finalCheck(app.id));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const canSubmit = !!sim && sim.result.status === 'simulated' && sim.check.ready && !sim.submissionBlocker && !!sim.report.digest && !submitResult;
+
   const setMode = async (mode: string) => {
     const a = await ensureApp();
     await api.setMode(a.id, mode || null);
@@ -86,14 +107,41 @@ export function ApplicationPanel({ jobId, applicationUrl }: { jobId: number; app
       {check && <Checklist check={check} />}
 
       <Notice kind="info">
-        <strong>TEST MODE</strong>: “Simulate” opens the application page in a controlled browser, fills what is known, attaches your CV and letter,
-        takes a screenshot and shows exactly what would be sent. It never clicks submit. It stops on CAPTCHA, sign-in or verification codes.
+        “Simulate” opens the application page in a controlled browser, fills what is known, attaches your CV and letter,
+        takes a screenshot and shows exactly what would be sent — without clicking submit. It stops on CAPTCHA, sign-in or verification codes.
+        {check?.submissionBlocker ? <div><strong>Submission disabled:</strong> {check.submissionBlocker}</div> : <div><strong>Real submission is enabled</strong>: after a complete simulation you can submit with your explicit confirmation.</div>}
       </Notice>
       <div className="row">
         <button onClick={simulate} disabled={busy}>{busy ? 'Simulating…' : sim ? 'Simulate again with my answers' : 'Simulate application'}</button>
         <a href={applicationUrl} target="_blank" rel="noreferrer noopener">Open the application page myself</a>
-        <button disabled title="Real submission arrives in Phase 7 and is disabled while test mode is on">Submit application</button>
+        <button className="submit-btn" disabled={!canSubmit || busy} title={canSubmit ? '' : sim?.submissionBlocker ?? check?.submissionBlocker ?? 'Run a complete simulation first'} onClick={() => setConfirming(true)}>Submit application</button>
       </div>
+
+      {confirming && sim && (
+        <div className="confirm-box danger-box">
+          <h3>Submit this application for real?</h3>
+          <p>
+            You are about to send your application for <strong>{String(sim.check.summary.Position)}</strong> at <strong>{String(sim.check.summary.Company)}</strong>,
+            with {String(sim.check.summary.CV)} and {String(sim.check.summary['Cover Letter'])}. The page will be re-opened and re-filled; the button is clicked only
+            if everything is identical to the simulation you reviewed. <strong>This cannot be undone.</strong>
+          </p>
+          <label className="inline"><input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} /> I reviewed the CV, the cover letter and every answer above.</label>
+          <div className="row">
+            <button className="danger-solid" disabled={!reviewed || busy} onClick={submit}>{busy ? 'Submitting…' : 'Yes, submit now'}</button>
+            <button className="secondary" onClick={() => setConfirming(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {submitResult && (
+        <Notice kind={submitResult.result.status === 'submitted' ? 'success' : 'error'}>
+          {submitResult.result.status === 'submitted' && <>Submitted and <strong>confirmed by the website</strong>: “{submitResult.result.submission?.outcome.evidence}”. The application is now APPLIED.</>}
+          {submitResult.result.status === 'aborted' && <>Not sent: {submitResult.result.abortReason}</>}
+          {submitResult.result.status === 'form_errors' && <>The website reported errors: {submitResult.result.submission?.outcome.evidence}. Not counted as applied.</>}
+          {submitResult.result.status === 'unconfirmed' && <>The button was clicked but the website showed no confirmation. Check your e-mail or the site; if you receive a confirmation, record it in the tracker. Not counted as applied.</>}
+          {['blocked', 'error', 'needs_input'].includes(submitResult.result.status) && <>Not sent: {submitResult.result.blocker?.detail ?? submitResult.result.error ?? 'the form needs your answers again.'}</>}
+        </Notice>
+      )}
 
       {sim && (
         <div className="sim">

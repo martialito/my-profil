@@ -162,8 +162,9 @@ describe.skipIf(!browserAvailable)('ApplicationEngineService (test mode)', () =>
     const api = createApp(db);
     expect((await request(api).put(`/api/applications/${app.id}/mode`).send({ mode: 'MANUAL' })).body.mode).toBe('MANUAL');
     expect((await request(api).get(`/api/applications/${app.id}/check`)).body.mode).toBe('MANUAL');
-    const sub = await request(api).post(`/api/applications/${app.id}/submit`);
-    expect(sub.status).toBe(501);
+    const sub = await request(api).post(`/api/applications/${app.id}/submit`).send({ confirm: true, expectedDigest: '0123456789abcdef' });
+    expect(sub.status).toBe(409); // test mode is on
+    expect((await request(api).post(`/api/applications/${app.id}/submit`).send({ expectedDigest: '0123456789abcdef' })).status).toBe(422); // no explicit confirmation
     expect((await request(api).get('/demo/application-form')).text).toContain('DEMO FORM');
     expect((await request(api).post('/api/answers/match').send({ question: 'When can you start?' })).body.status).toBe('matched');
   });

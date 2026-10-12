@@ -7,7 +7,7 @@ import { env, paths } from '../../config/env.js';
 import type { Db } from '../../database/client.js';
 import { ApplicationModes } from '../../models/common.js';
 import { ApplicationEngineService } from '../../services/application-engine.service.js';
-import { AppError, NotImplementedError } from '../../utils/errors.js';
+import { AppError } from '../../utils/errors.js';
 
 const Simulate = z.object({
   answers: z.record(z.string(), z.string().max(10_000)).optional(),
@@ -45,9 +45,12 @@ export function applicationEngineRoutes(db: Db): Router {
   r.get('/simulation-screenshot/:file', (req, res) => {
     res.sendFile(svc.screenshot(id(req), req.params.file as string), { dotfiles: 'allow' });
   });
-  r.post('/submit', () => {
-    // Real submission is deliberately not implemented before Phase 7 (and never while test mode is on).
-    throw new NotImplementedError('Real application submission', 7);
+  r.post('/submit', async (req, res) => {
+    // Real submission: requires your explicit confirmation and the digest of the simulation you reviewed.
+    const body = z
+      .object({ confirm: z.literal(true), expectedDigest: z.string().regex(/^[0-9a-f]{16}$/), answers: z.record(z.string(), z.string().max(10_000)).optional() })
+      .parse(req.body ?? {});
+    res.json(await exclusive(() => svc.submit(id(req), { expectedDigest: body.expectedDigest, answers: body.answers })));
   });
   return r;
 }

@@ -147,6 +147,47 @@ export class ApplicationService {
     return this.get(id);
   }
 
+  /**
+   * Record a submission CONFIRMED BY THE SITE (Phase 7 engine only, never reachable from the API directly).
+   */
+  recordSiteSubmission(id: number, proof: { confirmationText: string; confirmationUrl: string; screenshotPath?: string }) {
+    const app = this.row(id);
+    try {
+      assertTransition(app.status as ApplicationStatus, 'APPLIED', {
+        hasResume: app.resumeId !== null,
+        hasCoverLetter: app.coverLetterId !== null,
+        isSimulation: false,
+        confirmation: { source: 'site', text: proof.confirmationText, url: proof.confirmationUrl },
+      });
+    } catch (err) {
+      if (err instanceof TransitionError) throw new AppError(err.message, 409, 'INVALID_TRANSITION');
+      throw err;
+    }
+    const date = today();
+    this.db.transaction((tx) => {
+      tx.update(applications)
+        .set({
+          status: 'APPLIED',
+          isSimulation: false,
+          applicationDate: date,
+          submittedAt: new Date().toISOString(),
+          confirmationSource: 'site',
+          confirmationText: proof.confirmationText,
+          confirmationUrl: proof.confirmationUrl,
+          screenshotPath: proof.screenshotPath ?? null,
+          followUpDate: followUpDate(date, new SettingsService(this.db).get().automation.followUpDays),
+          updatedAt: NOW as unknown as string,
+        })
+        .where(eq(applications.id, id))
+        .run();
+      tx.insert(applicationEvents)
+        .values({ applicationId: id, type: 'status', fromStatus: app.status, toStatus: 'APPLIED', message: 'Submitted after your click — confirmed by the website.', data: { confirmationSource: 'site', ...proof } })
+        .run();
+    });
+    logger.info(`Application #${id}: submitted and confirmed by the website`);
+    return this.get(id);
+  }
+
   update(id: number, patch: { notes?: string | null; followUpDate?: string | null }) {
     const app = this.row(id);
     if (patch.followUpDate && !DATE_RE.test(patch.followUpDate)) throw new AppError('followUpDate must be YYYY-MM-DD');
