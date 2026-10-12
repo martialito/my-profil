@@ -178,3 +178,19 @@ tr.selected td { background: var(--info-bg); }
 .notif-list li.lvl-error { border-left-color: var(--danger); }
 .notif-list li.read { opacity: 0.6; border-left-color: transparent; }
 @media (max-width: 760px) { .two-col.tracker { grid-template-columns: 1fr; } }
+
+/* Phase 6: application engine */
+.ready-box { border-radius: 8px; padding: 12px; margin: 10px 0; border: 2px solid var(--border); }
+.ready-box.ready { border-color: var(--ok-fg); }
+.ready-box.ready > strong { color: var(--ok-fg); }
+.ready-box.not-ready > strong { color: var(--warn-fg); }
+.checklist-items { list-style: none; padding: 0; }
+.checklist-items li { padding: 4px 0; }
+.ck-icon { display: inline-block; width: 18px; text-align: center; font-weight: 700; }
+.ck-ok .ck-icon { color: var(--ok-fg); }
+.ck-warning .ck-icon { color: var(--warn-fg); }
+.ck-fail .ck-icon { color: var(--danger); }
+.ck-pending .ck-icon { color: var(--muted); }
+.question { border-left: 3px solid var(--warn-fg); padding: 6px 10px; margin: 8px 0; }
+.shot { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin-top: 10px; }
+.value-cell { max-width: 360px; overflow-wrap: anywhere; }

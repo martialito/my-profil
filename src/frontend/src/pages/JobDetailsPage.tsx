@@ -4,6 +4,7 @@ import { api, type Analysis, type DateCheck, type JobDetail, type Precheck } fro
 import { Card, Notice } from '../components';
 import { DateBadge } from './JobsPage';
 import { DocumentsPanel } from './DocumentsPanel';
+import { ApplicationPanel } from './ApplicationPanel';
 
 function Bar({ label, value }: { label: string; value: number | null }) {
   return (
@@ -167,9 +168,7 @@ export function JobDetailsPage() {
           {job.requirements.length > 0 && <Card title="Requirements"><ul>{job.requirements.map((r, i) => <li key={i}>{r}</li>)}</ul></Card>}
           <Card title="Job description">{job.description ? <div className="description">{job.description}</div> : <p className="muted">No description.</p>}</Card>
           <DocumentsPanel jobId={id} category={job.analysis?.category ?? null} />
-          <Card title="Application">
-            <p className="muted">Browser-assisted application, answer bank and test mode arrive in Phase 6.</p>
-          </Card>
+          <ApplicationPanel jobId={id} applicationUrl={job.applicationUrl ?? job.sourceUrl} />
         </div>
       </div>
     </>

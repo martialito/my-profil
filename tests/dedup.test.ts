@@ -8,6 +8,7 @@ describe('URL canonicalization', () => {
     expect(canonicalizeUrl('http://www.Example.com/jobs/123/?utm_source=x&gh_src=y#apply')).toBe('https://example.com/jobs/123');
     expect(canonicalizeUrl('https://jobs.lever.co/acme/abc/apply?lever-source=LinkedIn')).toBe('https://jobs.lever.co/acme/abc');
     expect(canonicalizeUrl('https://acme.com/job?id=5&b=2&utm_medium=z')).toBe('https://acme.com/job?b=2&id=5');
+    expect(canonicalizeUrl('http://127.0.0.1:3001/demo/application-form')).toBe('http://127.0.0.1:3001/demo/application-form');
   });
 });
 

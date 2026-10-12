@@ -1,13 +1,12 @@
-# STATUS: draft — wired in Phase 6 (application engine).
 An application form contains this question:
 "{{question}}"
-Field type: {{field_type}}. Options (if any): {{options}}
+Field type: {{field_type}}. Options: {{options}}
 
-Here is the candidate's Answer Bank (question → answer configured by the candidate):
+The candidate's Answer Bank (id: question → answer they configured):
 {{answer_bank}}
 
-Task: decide whether one Answer Bank entry answers this exact question.
-- If an entry clearly asks the same thing (same meaning, even with different wording), return its id and the answer
-  adapted to the field type/options WITHOUT changing its meaning.
-- If the question is ambiguous, differs in an important way (e.g. "now" vs "in the future", "citizen" vs "authorized"),
-  or no entry matches: return match=null and needs_human=true. NEVER invent or guess an answer.
+Decide whether ONE Answer Bank entry asks exactly the same thing.
+- Return its id in entry_id only if the meaning is the same (wording may differ).
+- If the question differs in an important way (e.g. "now" vs "in the future", "citizen" vs "authorized",
+  a different time frame, a different country), or no entry fits, return entry_id = null.
+- Never invent an answer. Explain your decision in one sentence in "reason".

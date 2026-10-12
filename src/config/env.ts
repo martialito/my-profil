@@ -19,6 +19,8 @@ const EnvSchema = z.object({
   GENERATED_DIR: z.string().default('./generated'),
   LOG_DIR: z.string().default('./logs'),
   TEST_MODE: booleanString.default(true),
+  /** Optional: use a specific Chromium binary instead of the one installed by `npx playwright install chromium`. */
+  BROWSER_EXECUTABLE_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -53,6 +55,7 @@ export const paths = {
   uploads: () => path.join(resolveFromRoot(env().DATA_DIR), 'uploads'),
   generated: () => resolveFromRoot(env().GENERATED_DIR),
   logs: () => resolveFromRoot(env().LOG_DIR),
+  browserProfile: () => resolveFromRoot('browser-profile'),
   prompts: () => resolveFromRoot('prompts'),
   migrations: () => resolveFromRoot('src/database/migrations'),
 };

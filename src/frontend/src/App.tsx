@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { api, type NotificationCounts } from './api';
+import { AnswerBankPage } from './pages/AnswerBankPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { JobDetailsPage } from './pages/JobDetailsPage';
 import { JobsPage } from './pages/JobsPage';
@@ -11,7 +12,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { SourcesPage } from './pages/SourcesPage';
 import { TrackerPage } from './pages/TrackerPage';
 
-const PLANNED = [{ label: 'Answer Bank', phase: 6 }];
+const PLANNED = [{ label: 'Real submission', phase: 7 }];
 
 export function App() {
   const [counts, setCounts] = useState<NotificationCounts>({ unread: 0, actionRequired: 0 });
@@ -34,6 +35,7 @@ export function App() {
         </NavLink>
         <NavLink to="/jobs">Job Search</NavLink>
         <NavLink to="/tracker">Application Tracker</NavLink>
+        <NavLink to="/answers">Answer Bank</NavLink>
         <NavLink to="/sources">Sources</NavLink>
         <NavLink to="/profile">My Profile</NavLink>
         <NavLink to="/master-cv">Master CV</NavLink>
@@ -52,6 +54,7 @@ export function App() {
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:id" element={<JobDetailsPage />} />
           <Route path="/tracker" element={<TrackerPage />} />
+          <Route path="/answers" element={<AnswerBankPage />} />
           <Route path="/sources" element={<SourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/master-cv" element={<MasterCvPage />} />

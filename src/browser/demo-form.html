@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>DEMO — Marketing Intern application — Hudson Hotels (fictional)</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; color: #1c2430; }
+  .demo { background: #fff6e0; color: #8a5a00; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+  label { display: block; font-weight: 600; margin-top: 14px; }
+  input[type=text], input[type=email], input[type=tel], input[type=url], select, textarea { width: 100%; padding: 6px; margin-top: 4px; box-sizing: border-box; }
+  fieldset { margin-top: 14px; border: 1px solid #ddd; }
+  button { margin-top: 20px; padding: 10px 18px; }
+</style>
+</head>
+<body>
+  <div class="demo">DEMO FORM served by your local NYC Internship Agent. Fictional company. Nothing typed here is sent anywhere.</div>
+  <h1>Marketing Intern</h1>
+  <p>Hudson Hotels · New York, NY · Spring/Summer 2027</p>
+  <form id="application" onsubmit="event.preventDefault(); document.getElementById('done').textContent='Demo: the form was NOT sent anywhere.';">
+    <label for="first_name">First Name *</label><input id="first_name" name="first_name" type="text" required />
+    <label for="last_name">Last Name *</label><input id="last_name" name="last_name" type="text" required />
+    <label for="email">Email *</label><input id="email" name="email" type="email" required />
+    <label for="phone">Phone</label><input id="phone" name="phone" type="tel" />
+    <label for="linkedin">LinkedIn Profile</label><input id="linkedin" name="linkedin" type="url" />
+    <label for="resume">Resume/CV *</label><input id="resume" name="resume" type="file" required />
+    <label for="cover_letter">Cover Letter</label><input id="cover_letter" name="cover_letter" type="file" />
+    <fieldset>
+      <legend>Are you legally authorized to work in the United States? *</legend>
+      <label><input type="radio" name="authorized" value="yes" required /> Yes</label>
+      <label><input type="radio" name="authorized" value="no" /> No</label>
+    </fieldset>
+    <label for="sponsorship">Will you require visa sponsorship? *</label>
+    <select id="sponsorship" name="sponsorship" required><option value="">Select…</option><option>Yes</option><option>No</option></select>
+    <label for="start">What is your earliest start date? *</label><input id="start" name="start" type="text" required />
+    <label for="why">Why do you want to join Hudson Hotels? *</label><textarea id="why" name="why" rows="4" required></textarea>
+    <label for="gender">Gender (voluntary)</label>
+    <select id="gender" name="gender"><option value="">Select…</option><option>Female</option><option>Male</option><option>Decline to self-identify</option></select>
+    <button type="submit">Submit application</button>
+    <p id="done"></p>
+  </form>
+</body>
+</html>

@@ -123,6 +123,15 @@ export function SettingsPage() {
         <p className="muted">RED offers never get documents automatically; you can still force it on the offer page.</p>
       </Card>
 
+      <Card title="Browser (application simulation)" actions={actions('browser')}>
+        <div className="grid">
+          <Field label="Headless (no window)" hint="Turn off to watch the form being filled"><input type="checkbox" checked={s.browser.headless} onChange={(e) => patch('browser', { headless: e.target.checked })} /></Field>
+          <Field label="Keep my browser session" hint="Cookies kept in browser-profile/ so you sign in once yourself. Passwords are never typed or stored."><input type="checkbox" checked={s.browser.persistentProfile} onChange={(e) => patch('browser', { persistentProfile: e.target.checked })} /></Field>
+          <Field label="Delay between actions (ms)"><input type="number" value={s.browser.slowMoMs} onChange={(e) => patch('browser', { slowMoMs: num(e.target.value) })} /></Field>
+          <Field label="Page timeout (s)"><input type="number" value={s.browser.timeoutSeconds} onChange={(e) => patch('browser', { timeoutSeconds: num(e.target.value) })} /></Field>
+        </div>
+      </Card>
+
       <Card title="Notifications" actions={actions('notifications')}>
         <p className="muted">Dashboard notifications are always on. Email / Telegram / Discord channels are not implemented yet.</p>
       </Card>

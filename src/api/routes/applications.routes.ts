@@ -23,6 +23,10 @@ export function applicationsRoutes(db: Db): Router {
     const q = z.object({ status: z.string().optional(), q: z.string().optional(), active: z.enum(['true', 'false']).optional() }).parse(req.query);
     res.json(svc.list({ status: q.status, q: q.q, active: q.active === 'true' }));
   });
+  r.get('/by-job/:jobId', (req, res) => {
+    const found = svc.list().find((a) => a.jobId === Number(req.params.jobId));
+    res.json(found ? svc.get(found.id) : null);
+  });
   r.post('/for-job/:jobId', (req, res) => {
     res.status(201).json(svc.get(svc.forJob(Number(req.params.jobId)).id));
   });

@@ -12,9 +12,9 @@ import { generateKey } from './utils/crypto.js';
 import { JobSearchService } from './services/job-search.service.js';
 import { JobAnalysisService } from './services/job-analysis.service.js';
 import { DocumentsService } from './services/documents.service.js';
+import { dryRun } from './services/dry-run.service.js';
 
 const PLANNED: Record<string, { phase: number; description: string }> = {
-  'dry-run': { phase: 6, description: 'full pipeline with simulated submission (nothing is sent)' },
   apply: { phase: 7, description: 'submit applications (requires validation)' },
 };
 
@@ -64,6 +64,14 @@ switch (cmd) {
     if (summary.errors.length && summary.cvs === 0) process.exit(1);
     break;
   }
+  case 'dry-run': {
+    const db = getDb();
+    console.log('DRY RUN — nothing will be submitted.\n');
+    const steps = await dryRun(db, { log: (l) => console.log(l) });
+    closeDb();
+    if (steps.some((s) => s.status === 'failed')) process.exit(1);
+    break;
+  }
   case 'search': {
     const db = getDb();
     const svc = new JobSearchService(db);
@@ -84,7 +92,7 @@ switch (cmd) {
       console.error(`"${cmd}" (${planned.description}) is not implemented yet — planned for Phase ${planned.phase}.`);
       process.exit(2);
     }
-    console.error(`Unknown command "${cmd ?? ''}". Available: gen-key, migrate, status, search, analyze [--limit=N], generate [--limit=N], ${Object.keys(PLANNED).join(', ')}`);
+    console.error(`Unknown command "${cmd ?? ''}". Available: gen-key, migrate, status, search, analyze [--limit=N], generate [--limit=N], dry-run, ${Object.keys(PLANNED).join(', ')}`);
     process.exit(1);
   }
 }

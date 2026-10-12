@@ -12,6 +12,8 @@ process.env.LOG_DIR = `${tmp}/logs`;
 process.env.GENERATED_DIR = `${tmp}/generated`;
 // Tests must never call a real LLM.
 process.env.ANTHROPIC_API_KEY = '';
+// Use the pre-installed Chromium when available (CI / cloud sandbox).
+if (!process.env.BROWSER_EXECUTABLE_PATH && fs.existsSync('/opt/pw-browsers/chromium')) process.env.BROWSER_EXECUTABLE_PATH = '/opt/pw-browsers/chromium';
 resetEnvCache();
 
 setEncryptionKeyForTests(crypto.randomBytes(32));

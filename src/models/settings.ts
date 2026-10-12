@@ -52,6 +52,19 @@ export const DocumentSettingsSchema = z.object({
   autoGenerateFor: z.array(z.enum(['GREEN', 'YELLOW'])).default(['GREEN', 'YELLOW']),
 });
 
+export const BrowserSettingsSchema = z.object({
+  /** Run the browser without a window. Turn off to watch the form being filled. */
+  headless: z.boolean().default(true),
+  /**
+   * Keep cookies between runs (browser-profile/, git-ignored) so you only log in once by hand.
+   * Passwords are never typed or stored by the app.
+   */
+  persistentProfile: z.boolean().default(false),
+  /** Milliseconds between actions, to stay human-paced. */
+  slowMoMs: z.number().int().min(0).max(5000).default(150),
+  timeoutSeconds: z.number().int().min(10).max(300).default(45),
+});
+
 export const NotificationSettingsSchema = z.object({
   dashboard: z.literal(true).default(true),
   email: z.boolean().default(false),
@@ -65,6 +78,7 @@ export const SettingsSchema = z.object({
   automation: AutomationSettingsSchema.prefault({}),
   llm: LlmSettingsSchema.prefault({}),
   documents: DocumentSettingsSchema.prefault({}),
+  browser: BrowserSettingsSchema.prefault({}),
   notifications: NotificationSettingsSchema.prefault({}),
 });
 
@@ -78,6 +92,7 @@ export const SettingsSectionSchemas = {
   automation: AutomationSettingsSchema,
   llm: LlmSettingsSchema,
   documents: DocumentSettingsSchema,
+  browser: BrowserSettingsSchema,
   notifications: NotificationSettingsSchema,
 } as const satisfies Record<SettingsSection, z.ZodType>;
 

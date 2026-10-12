@@ -12,11 +12,11 @@ Il est construit par phases. Ce README décrit ce qui fonctionne **réellement**
 | 3 | Analyse LLM, scoring, compatibilité des dates | ✅ fait |
 | 4 | CV personnalisé, lettre de motivation | ✅ fait |
 | 5 | Dashboard complet, suivi des candidatures, notifications | ✅ fait |
-| 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ⏳ à faire |
+| 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ✅ fait |
 | 7 | Envoi réel des candidatures | ⏳ à faire |
 
-Les commandes `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
-(code de sortie 2, message « planned for Phase N ») tant que la phase n'est pas implémentée.
+La commande `apply` existe déjà mais **refuse de s'exécuter**
+(code de sortie 2, « planned for Phase 7 ») : l'envoi réel n'est pas implémenté.
 
 ## Stack
 
@@ -38,6 +38,7 @@ npm install
 cp .env.example .env
 npm run gen:key            # copier la valeur dans ENCRYPTION_KEY du .env
 # optionnel : ANTHROPIC_API_KEY=... dans .env (nécessaire pour l'extraction CV par Claude, puis Phases 3-4)
+npx playwright install chromium   # navigateur pour la simulation des candidatures (une seule fois)
 npm run dev                # API sur http://127.0.0.1:3001, interface sur http://127.0.0.1:5173
 ```
 
@@ -49,7 +50,7 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 |---|---|
 | `npm run dev` | API (rechargement auto) + interface Vite |
 | `npm run build` / `npm run start` | build de production (`dist/`), puis serveur unique sur le port 3001 qui sert aussi l'interface |
-| `npm run test` | tests (172 tests) |
+| `npm run test` | tests (201 tests, dont des tests navigateur réels) |
 | `npm run lint` | ESLint + vérification TypeScript |
 | `npm run status` | résumé : complétude du profil, version du Master CV, mode, test mode |
 | `npm run db:migrate` | applique les migrations (fait aussi automatiquement au démarrage) |
@@ -58,7 +59,8 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 | `npm run search` | lance la recherche sur les boards Greenhouse/Lever configurés |
 | `npm run analyze [-- --limit=N]` | analyse avec Claude les offres pas encore analysées (50 max par défaut) |
 | `npm run generate [-- --limit=N]` | génère CV + lettre pour les offres GREEN/YELLOW qui n'en ont pas encore |
-| `npm run apply / dry-run` | réservées aux phases 6 et 7 (pas encore implémentées) |
+| `npm run dry-run` | recherche → analyse → score → CV → lettre → formulaire simulé ; **n'envoie rien** |
+| `npm run apply` | réservée à la phase 7 (pas implémentée) |
 
 ## Ce qui fonctionne (Phase 1)
 
@@ -211,7 +213,7 @@ activité récente et check-list de démarrage.
 
 **Apply** fonctionne aujourd'hui en mode **MANUAL** : il ouvre la page de l'offre, vous postulez vous-même, puis vous
 confirmez dans le tracker (« I submitted it », avec la date et, si vous l'avez, le message ou l'URL de confirmation).
-Le remplissage assisté du formulaire arrive en Phase 6.
+Le remplissage assisté (simulation) est disponible sur la page de chaque offre (Phase 6).
 
 ### Application Tracker
 - Statuts FOUND → … → READY_TO_APPLY → APPLIED → INTERVIEW / OFFER / REJECTED, WITHDRAWN, avec une **machine à états**
@@ -230,6 +232,46 @@ relance due (vérifiée au démarrage du serveur puis toutes les heures), erreur
 Pas de doublon (clé de déduplication). Les canaux e-mail / Telegram / Discord ne sont pas implémentés :
 l'interface `NotificationChannel` est prête pour les ajouter.
 
+## Ce qui fonctionne (Phase 6) — TEST MODE, rien n'est envoyé
+
+### Application Answer Bank (page *Answer Bank*)
+- Questions types pré-créées **sans réponse** (autorisation de travail, sponsorship, inscription, salaire, relocation…),
+  sauf la disponibilité tirée de vos Settings (« When can you start? → March 2027 », « When can you finish? → August 2027 »,
+  « 6 » mois). Autorisation de travail / sponsorship : à défaut, la réponse de *My Profile* est utilisée.
+- Reconnaissance des formulations proches (synonymes : *eligible/authorized*, *U.S./United States*, *visa/sponsorship*…).
+  Si un mot qui change le sens diffère (*now, future, currently, not…*), si la ressemblance est moyenne, si la réponse ne
+  correspond à aucune option du formulaire, ou si vous avez coché « always confirm » → **confirmation demandée**.
+  Question inconnue ou réponse vide → **on vous demande**, rien n'est inventé. Réponses chiffrées en base.
+- Une suggestion par Claude existe (`prompts/application-question.txt`) : elle ne peut que désigner une réponse
+  existante et exige toujours votre confirmation.
+
+### Navigateur contrôlé (`src/browser/`, Playwright)
+1. ouvre la page de candidature ; 2. **s'arrête** sur CAPTCHA, page anti-bot, connexion (mot de passe) ou code de
+   vérification (MFA) et vous prévient — sans jamais tenter de les contourner ; 3. détecte les champs (texte, select,
+   radio, case à cocher, fichier) avec leur libellé et leur caractère obligatoire ; 4. remplit ce qui vient du profil,
+   de l'Answer Bank ou de vos réponses pour cette offre ; 5. joint le CV et la lettre générés pour **cette** offre ;
+   6. relit chaque champ pour vérifier la valeur ; 7. les questions inconnues sont listées pour vous ;
+   8. capture d'écran ; 9. repère le bouton d'envoi **sans jamais cliquer dessus**.
+   Les questions d'auto-identification (genre, origine, handicap, vétéran) ne sont jamais remplies à votre place.
+- Session persistante optionnelle (`browser-profile/`, ignoré par git) pour vous connecter vous-même une fois ;
+  aucun mot de passe n'est saisi ni stocké par l'application.
+- Limite actuelle : formulaires sur une seule page (cas de Greenhouse et Lever) ; les formulaires multi-étapes (Workday…)
+  ne sont pas parcourus.
+
+### Vérification finale & modes (page d'une offre → *Application*)
+Encadré **APPLICATION READY** (entreprise, poste, lieu, dates, score, CV, lettre) et checklist : bonne entreprise et bon
+poste (lus sur la page de candidature), bon lieu, bon CV, bonne lettre, bon candidat, dates, aucun champ obligatoire
+sans réponse, aucune information inventée, aucune réponse contradictoire (Answer Bank vs My Profile), limite quotidienne
+(`maxApplicationsPerDay`). Mode FULL_AUTO / SEMI_AUTO / MANUAL réglable globalement et **par offre**.
+Le bouton *Submit application* est désactivé et l'API d'envoi répond « non implémenté (Phase 7) ».
+
+### Simulation & dry run
+« Simulate application » montre exactement ce qui serait envoyé (champ, valeur, source, vérifié), les questions pour
+vous (avec option « enregistrer dans l'Answer Bank ») et la capture d'écran ; un rapport JSON est enregistré dans
+`generated/applications/{job_id}/`. Un **formulaire de démonstration** local (`/demo/application-form`, entreprise
+fictive) permet d'essayer le remplissage depuis la page *Answer Bank*. `npm run dry-run` enchaîne toutes les étapes et
+indique honnêtement celles qui sont sautées (pas de board, pas de clé API…).
+
 ## Sécurité et données personnelles
 
 - Le serveur écoute uniquement sur `127.0.0.1` par défaut.
@@ -245,7 +287,8 @@ l'interface `NotificationChannel` est prête pour les ajouter.
 - La *temperature* est ignorée pour les modèles qui ne l'acceptent plus (famille Opus 5.x) ; la profondeur se règle avec *effort*.
 - Le *refusal fallback* serveur d'Anthropic (bêta) est activé par défaut pour les modèles compatibles ; désactivable dans Settings.
 - Les prompts sont dans `/prompts/*.txt`. `cv-extraction.txt`, `job-analysis.txt`, `resume-customization.txt` et `cover-letter.txt` sont utilisés ;
-  `job-ranking.txt` et `application-question.txt` sont des brouillons (Phase 6).
+  `application-question.txt` sert aux suggestions de l'Answer Bank ; `job-ranking.txt` reste un brouillon
+  (le classement se fait par le score calculé).
   Le classement des offres se fait par le score calculé (pas d'appel LLM supplémentaire).
 
 ## Architecture
@@ -264,11 +307,11 @@ src/
   utils/                  chiffrement, logger, erreurs
   job-search/             connecteurs Greenhouse/Lever, filtres NYC/stage, extraction, déduplication, requêtes
   job-analysis/           isDateCompatible, schéma de sortie LLM, formule de score et plafonds
-  application/            machine à états des candidatures, calcul des relances
+  application/            machine à états, relances, Answer Bank (matching), plan de remplissage, vérification finale
   notifications/          service de notifications (dashboard) et interface des canaux
   cover-letter/           vérification et rendu PDF/DOCX des lettres
   documents/              utilitaires de rendu communs
-  browser/                module de la phase 6 (README de cadrage uniquement)
+  browser/                moteur Playwright (détection des champs/blocages, remplissage, capture), formulaire de démo
   server.ts, cli.ts       points d'entrée
 tests/                    tests Vitest (+ génération de CV PDF/DOCX fictifs)
 ```

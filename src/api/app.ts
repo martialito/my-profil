@@ -19,6 +19,8 @@ import { analysisRoutes } from './routes/analysis.routes.js';
 import { documentsRoutes, jobDocumentsRoutes } from './routes/documents.routes.js';
 import { applicationsRoutes } from './routes/applications.routes.js';
 import { notificationsRoutes } from './routes/notifications.routes.js';
+import { answersRoutes } from './routes/answers.routes.js';
+import { applicationEngineRoutes, demoRoutes } from './routes/engine.routes.js';
 import { JobSearchService, type JobSearchOptions } from '../services/job-search.service.js';
 
 export function createApp(db: Db, opts: { staticDir?: string; jobSearch?: JobSearchOptions } = {}): express.Express {
@@ -44,7 +46,12 @@ export function createApp(db: Db, opts: { staticDir?: string; jobSearch?: JobSea
   app.use('/api/jobs/:id/documents', jobDocumentsRoutes(db));
   app.use('/api/jobs', jobsRoutes(db, search));
   app.use('/api/documents', documentsRoutes(db));
+  app.use('/api/applications/:id', applicationEngineRoutes(db));
   app.use('/api/applications', applicationsRoutes(db));
+  app.use('/api/answers', answersRoutes(db));
+  const demo = demoRoutes(db);
+  app.use('/demo', demo.page);
+  app.use('/api/demo', demo.api);
   app.use('/api/notifications', notificationsRoutes(db));
   app.use('/api/search', searchRoutes(search));
   app.use('/api/analysis', analysisRoutes(db));

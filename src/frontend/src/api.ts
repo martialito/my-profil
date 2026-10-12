@@ -88,6 +88,22 @@ export interface JobDocuments {
   resume: null | { id: number; version: number; createdAt: string; content: import('../../models/master-cv').MasterCvContent; checks: { repaired: TruthViolation[]; violations: TruthViolation[]; warnings: string[]; changes: string[] } | null };
   coverLetter: null | { id: number; version: number; createdAt: string; content: string; editedByUser: boolean; checks: { issues: string[]; needsReview: boolean; wordCount: number } | null };
 }
+export interface BankEntry { id: number; question: string; aliases: string[]; answer: string | null; requiresConfirmation: boolean; category: string | null }
+export interface MatchResult { status: 'matched' | 'needs_confirmation' | 'unanswered' | 'unknown'; entry?: BankEntry; answer?: string; similarity: number; reason: string }
+export interface PlanItem { field: { id: string; label: string; type: string; required: boolean; options: string[] }; status: string; value?: string; source: string; reason: string }
+export interface CheckItem { key: string; label: string; status: 'ok' | 'warning' | 'fail' | 'pending'; detail: string }
+export interface FinalCheckResult { items: CheckItem[]; ready: boolean; cleanForAutomation: boolean; summary: Record<string, string | number | null>; mode: string }
+export interface SimulationReport {
+  result: { status: 'blocked' | 'needs_input' | 'simulated' | 'error'; url: string; finalUrl?: string; blocker?: { kind: string; detail: string }; error?: string; submitButton?: string | null; screenshotUrl: string | null; durationMs: number };
+  report: {
+    wouldFill: Array<{ label: string; intended: string; actual: string; source: string; verified: boolean }>;
+    questionsForYou: Array<{ label: string; type: string; options: string[]; reason: string }>;
+    toConfirm: Array<{ label: string; proposed?: string; reason: string }>;
+    leftEmpty: Array<{ label: string; reason: string }>;
+  };
+  check: FinalCheckResult;
+}
+export interface DemoSimulation { status: string; blocker?: { kind: string; detail: string }; error?: string; filled: Array<{ label: string; actual: string; source: string; verified: boolean }>; plan?: { needsInput: PlanItem[]; needsConfirmation: PlanItem[]; skipped: PlanItem[] }; submitButton?: string | null; screenshotUrl: string | null }
 export interface Precheck { date: DateCheck; locationMatch: string; internship: { isInternship: boolean; reason?: string } }
 export interface AnalysisSummary { analyzed: number; green: number; yellow: number; red: number; errors: Array<{ jobId: number; company: string; title: string; reason: string }>; costUsd: number }
 export interface Board { id: number; provider: 'greenhouse' | 'lever'; token: string; companyName: string; enabled: boolean; lastFetchedAt: string | null; lastError: string | null; lastJobCount: number | null }
@@ -117,6 +133,16 @@ export const api = {
   notificationCounts: () => call<NotificationCounts>('GET', '/api/notifications/counts'),
   readNotification: (id: number) => call<NotificationCounts>('POST', `/api/notifications/${id}/read`),
   readAllNotifications: () => call<NotificationCounts>('POST', '/api/notifications/read-all'),
+  answers: () => call<BankEntry[]>('GET', '/api/answers'),
+  createAnswer: (e: Omit<BankEntry, 'id'>) => call<BankEntry>('POST', '/api/answers', e),
+  updateAnswer: (id: number, e: Omit<BankEntry, 'id'>) => call<BankEntry>('PUT', `/api/answers/${id}`, e),
+  deleteAnswer: (id: number) => fetch(`/api/answers/${id}`, { method: 'DELETE' }),
+  matchAnswer: (question: string) => call<MatchResult>('POST', '/api/answers/match', { question }),
+  applicationByJob: (jobId: number) => call<ApplicationDetail | null>('GET', `/api/applications/by-job/${jobId}`),
+  finalCheck: (id: number) => call<FinalCheckResult>('GET', `/api/applications/${id}/check`),
+  setMode: (id: number, mode: string | null) => call<{ mode: string }>('PUT', `/api/applications/${id}/mode`, { mode }),
+  simulate: (id: number, body: { answers?: Record<string, string>; saveToBank?: string[] }) => call<SimulationReport>('POST', `/api/applications/${id}/simulate`, body),
+  simulateDemo: (answers?: Record<string, string>) => call<DemoSimulation>('POST', '/api/demo/simulate', { answers }),
   ungroupJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/ungroup`),
   importJob: (input: ManualJobInput) => call<{ kind: string; id: number; of?: number; warnings: string[] }>('POST', '/api/jobs/manual', input),
   jobSources: () => call<JobSource[]>('GET', '/api/jobs/sources'),

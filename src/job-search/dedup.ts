@@ -14,8 +14,9 @@ export function canonicalizeUrl(input: string): string {
     return input.trim();
   }
   u.hash = '';
-  u.protocol = 'https:';
   u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
+  // http and https point to the same public offer; local addresses keep their protocol.
+  if (u.protocol === 'http:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(u.hostname)) u.protocol = 'https:';
   for (const key of [...u.searchParams.keys()]) {
     if (TRACKING_PARAMS.test(key)) u.searchParams.delete(key);
   }
