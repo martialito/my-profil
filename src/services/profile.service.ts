@@ -37,6 +37,7 @@ export class ProfileService {
       },
       headline: opt(p.headline),
       summary: opt(p.summary),
+      motivations: opt(p.motivations),
       workAuthorization: p.workAuthorization ?? {},
       preferences: PreferencesSchema.parse(p.preferences ?? {}),
       education: edu.map((e) => ({
@@ -88,6 +89,7 @@ export class ProfileService {
           website: nullable(p.personal.website),
           headline: nullable(p.headline),
           summary: nullable(p.summary),
+          motivations: nullable(p.motivations),
           workAuthorization: p.workAuthorization,
           preferences: p.preferences,
           updatedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,

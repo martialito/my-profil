@@ -1,0 +1,1 @@
+ALTER TABLE `candidate_profiles` ADD `motivations` text;

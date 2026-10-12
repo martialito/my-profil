@@ -63,6 +63,11 @@ export interface Analysis {
   missingSkills: string[]; dateDetails: DateCheck | null; model: string | null; costUsd: number | null; createdAt: string;
   scoreDetails: { caps: Array<{ max: number; reason: string }>; notes: string[]; rawFormulaScore: number; masterCvVersion: number } | null;
 }
+export interface TruthViolation { type: string; message: string }
+export interface JobDocuments {
+  resume: null | { id: number; version: number; createdAt: string; content: import('../../models/master-cv').MasterCvContent; checks: { repaired: TruthViolation[]; violations: TruthViolation[]; warnings: string[]; changes: string[] } | null };
+  coverLetter: null | { id: number; version: number; createdAt: string; content: string; editedByUser: boolean; checks: { issues: string[]; needsReview: boolean; wordCount: number } | null };
+}
 export interface Precheck { date: DateCheck; locationMatch: string; internship: { isInternship: boolean; reason?: string } }
 export interface AnalysisSummary { analyzed: number; green: number; yellow: number; red: number; errors: Array<{ jobId: number; company: string; title: string; reason: string }>; costUsd: number }
 export interface Board { id: number; provider: 'greenhouse' | 'lever'; token: string; companyName: string; enabled: boolean; lastFetchedAt: string | null; lastError: string | null; lastJobCount: number | null }
@@ -79,6 +84,10 @@ export const api = {
   precheck: (id: number) => call<Precheck>('GET', `/api/jobs/${id}/precheck`),
   analyzeJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/analyze`),
   analyzePending: (limit?: number) => call<AnalysisSummary>('POST', '/api/analysis/run', limit ? { limit } : {}),
+  documents: (id: number) => call<JobDocuments>('GET', `/api/jobs/${id}/documents`),
+  generateDocuments: (id: number, body: { what: 'all' | 'resume' | 'cover-letter'; guidance?: string; force?: boolean }) => call<JobDocuments>('POST', `/api/jobs/${id}/documents`, body),
+  saveLetter: (id: number, text: string) => call<JobDocuments>('PUT', `/api/jobs/${id}/documents/cover-letter`, { text }),
+  generatePending: (limit?: number) => call<{ cvs: number; letters: number; errors: Array<{ jobId: number; company: string; title: string; reason: string }> }>('POST', '/api/documents/generate-pending', limit ? { limit } : {}),
   ungroupJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/ungroup`),
   importJob: (input: ManualJobInput) => call<{ kind: string; id: number; of?: number; warnings: string[] }>('POST', '/api/jobs/manual', input),
   jobSources: () => call<JobSource[]>('GET', '/api/jobs/sources'),

@@ -46,6 +46,12 @@ export const LlmSettingsSchema = z.object({
   refusalFallback: z.boolean().default(true),
 });
 
+export const DocumentSettingsSchema = z.object({
+  letterLanguage: z.string().trim().min(2).max(30).default('English'),
+  /** Only offers in these categories get documents generated automatically. */
+  autoGenerateFor: z.array(z.enum(['GREEN', 'YELLOW'])).default(['GREEN', 'YELLOW']),
+});
+
 export const NotificationSettingsSchema = z.object({
   dashboard: z.literal(true).default(true),
   email: z.boolean().default(false),
@@ -58,6 +64,7 @@ export const SettingsSchema = z.object({
   classification: ClassificationSettingsSchema.prefault({}),
   automation: AutomationSettingsSchema.prefault({}),
   llm: LlmSettingsSchema.prefault({}),
+  documents: DocumentSettingsSchema.prefault({}),
   notifications: NotificationSettingsSchema.prefault({}),
 });
 
@@ -70,6 +77,7 @@ export const SettingsSectionSchemas = {
   classification: ClassificationSettingsSchema,
   automation: AutomationSettingsSchema,
   llm: LlmSettingsSchema,
+  documents: DocumentSettingsSchema,
   notifications: NotificationSettingsSchema,
 } as const satisfies Record<SettingsSection, z.ZodType>;
 

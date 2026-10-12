@@ -13,7 +13,8 @@ function comparable(c: Omit<CandidateProfile, 'preferences'> | MasterCvContent):
 
 const range = (s?: string, e?: string, current?: boolean) => [s ?? '?', current ? 'Present' : (e ?? '?')].join(' – ');
 
-export function CvPreview({ content }: { content: MasterCvContent }) {
+/** documentView: show exactly what the generated PDF/DOCX contains (bullets only, no per-role description/tools). */
+export function CvPreview({ content, documentView = false }: { content: MasterCvContent; documentView?: boolean }) {
   const p = content.personal;
   const byCat = (c: string) => content.skills.filter((s) => s.category === c);
   return (
@@ -30,11 +31,11 @@ export function CvPreview({ content }: { content: MasterCvContent }) {
             {e.location ? `, ${e.location}` : ''}
             <span className="muted">{range(e.startDate, e.endDate, e.isCurrent)}</span>
           </div>
-          {e.description && <p>{e.description}</p>}
+          {!documentView && e.description && <p>{e.description}</p>}
           {e.achievements.length > 0 && (
             <ul>{e.achievements.map((a, j) => <li key={j}>{a}</li>)}</ul>
           )}
-          {(e.technologies.length > 0 || e.skills.length > 0) && <small className="muted">{[...e.technologies, ...e.skills].join(', ')}</small>}
+          {!documentView && (e.technologies.length > 0 || e.skills.length > 0) && <small className="muted">{[...e.technologies, ...e.skills].join(', ')}</small>}
         </div>
       ))}
       {content.education.length > 0 && <h3>Education</h3>}

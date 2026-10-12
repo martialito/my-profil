@@ -103,6 +103,9 @@ export function ProfilePage() {
           <Field label="Website"><input value={val(p.personal.website)} onChange={(e) => setPersonal('website', e.target.value)} /></Field>
           <Field label="Headline" wide><input value={val(p.headline)} onChange={(e) => update({ headline: e.target.value })} /></Field>
           <Field label="Summary" wide><textarea rows={3} value={val(p.summary)} onChange={(e) => update({ summary: e.target.value })} /></Field>
+          <Field label="My motivations (used by cover letters, never shown on the CV)" wide hint="In your own words: why NYC, why these industries, what you want to learn. Letters will not invent motivations you did not write.">
+            <textarea rows={4} value={val(p.motivations)} onChange={(e) => update({ motivations: e.target.value })} />
+          </Field>
         </div>
       </Card>
 

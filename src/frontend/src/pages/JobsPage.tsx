@@ -65,6 +65,21 @@ export function JobsPage() {
       setBusy(false);
     }
   };
+  const generateAll = async () => {
+    setBusy(true);
+    setMsg(undefined);
+    try {
+      const r = await api.generatePending(20);
+      setMsg({
+        kind: r.errors.length ? 'warning' : 'success',
+        text: r.cvs === 0 && !r.errors.length ? 'No GREEN/YELLOW offer is waiting for documents.' : `${r.cvs} CV(s) and ${r.letters} cover letter(s) generated.` + (r.errors.length ? ` ${r.errors.length} error(s): ${r.errors[0]!.reason}` : ''),
+      });
+    } catch (e) {
+      setMsg({ kind: 'error', text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
   const status = async (id: number, s: string) => {
     await api.setJobStatus(id, s);
     setReload((n) => n + 1);
@@ -75,7 +90,8 @@ export function JobsPage() {
       <div className="page-head">
         <h1>Job Search</h1>
         <div className="actions">
-          <button onClick={analyzeAll} disabled={busy}>{busy ? 'Analysing…' : 'Analyse new offers'}</button>
+          <button onClick={analyzeAll} disabled={busy}>{busy ? 'Working…' : 'Analyse new offers'}</button>
+          <button className="secondary" onClick={generateAll} disabled={busy}>Generate CVs & letters</button>
           <Link to="/sources" className="button-link">Sources & search</Link>
         </div>
       </div>

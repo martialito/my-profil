@@ -106,6 +106,23 @@ export function SettingsPage() {
         </div>
       </Card>
 
+      <Card title="Documents" actions={actions('documents')}>
+        <div className="grid">
+          <Field label="Cover letter language"><input value={s.documents.letterLanguage} onChange={(e) => patch('documents', { letterLanguage: e.target.value })} /></Field>
+          <Field label="Generate CV + letter automatically for">
+            <div className="row">
+              {(['GREEN', 'YELLOW'] as const).map((c) => (
+                <label key={c} className="inline">
+                  <input type="checkbox" checked={s.documents.autoGenerateFor.includes(c)} onChange={(e) => patch('documents', { autoGenerateFor: e.target.checked ? [...s.documents.autoGenerateFor, c] : s.documents.autoGenerateFor.filter((x) => x !== c) })} />
+                  {c}
+                </label>
+              ))}
+            </div>
+          </Field>
+        </div>
+        <p className="muted">RED offers never get documents automatically; you can still force it on the offer page.</p>
+      </Card>
+
       <Card title="Notifications" actions={actions('notifications')}>
         <p className="muted">Dashboard notifications are always on. Email / Telegram / Discord channels are not implemented yet.</p>
       </Card>

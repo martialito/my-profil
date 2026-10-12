@@ -79,6 +79,7 @@ export const CandidateProfileSchema = z.object({
   personal: PersonalInfoSchema.prefault({}),
   headline: OptionalText,
   summary: OptionalText,
+  motivations: OptionalText,
   workAuthorization: WorkAuthorizationSchema.prefault({}),
   education: z.array(EducationSchema).default([]),
   experiences: z.array(ExperienceSchema).default([]),

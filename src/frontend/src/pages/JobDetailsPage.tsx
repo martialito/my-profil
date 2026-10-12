@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, type Analysis, type DateCheck, type JobDetail, type Precheck } from '../api';
 import { Card, Notice } from '../components';
-import { DateBadge, startLabel } from './JobsPage';
+import { DateBadge } from './JobsPage';
+import { DocumentsPanel } from './DocumentsPanel';
 
 function Bar({ label, value }: { label: string; value: number | null }) {
   return (
@@ -165,8 +166,9 @@ export function JobDetailsPage() {
           {job.responsibilities.length > 0 && <Card title="Responsibilities"><ul>{job.responsibilities.map((r, i) => <li key={i}>{r}</li>)}</ul></Card>}
           {job.requirements.length > 0 && <Card title="Requirements"><ul>{job.requirements.map((r, i) => <li key={i}>{r}</li>)}</ul></Card>}
           <Card title="Job description">{job.description ? <div className="description">{job.description}</div> : <p className="muted">No description.</p>}</Card>
-          <Card title="Customized CV · Cover letter · Application">
-            <p className="muted">Arrive in Phases 4 and 6. Start: {startLabel(job)}.</p>
+          <DocumentsPanel jobId={id} category={job.analysis?.category ?? null} />
+          <Card title="Application">
+            <p className="muted">Browser-assisted application, answer bank and test mode arrive in Phase 6.</p>
           </Card>
         </div>
       </div>

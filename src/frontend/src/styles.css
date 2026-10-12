@@ -151,3 +151,11 @@ code { font-size: 12px; }
 .chip.ok { background: var(--ok-bg); color: var(--ok-fg); }
 .chip.miss { background: var(--err-bg); color: var(--err-fg); }
 .two-col.even { grid-template-columns: 1fr 1fr; }
+
+/* Phase 4: documents */
+.tabs { display: flex; gap: 4px; margin: 14px 0 10px; border-bottom: 1px solid var(--border); }
+.tab { background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent; border-radius: 0; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.doc-actions { margin-bottom: 10px; }
+.doc-preview { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--bg); }
+textarea.letter { font-family: Georgia, 'Times New Roman', serif; line-height: 1.5; }

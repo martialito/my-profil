@@ -32,6 +32,8 @@ export const candidateProfiles = sqliteTable('candidate_profiles', {
   website: encryptedText('website'),
   headline: text('headline'),
   summary: text('summary'),
+  /** The candidate's own words about why they want an internship in NYC — used by cover letters, never invented. */
+  motivations: encryptedText('motivations'),
   workAuthorization: encryptedJson<WorkAuthorization>()('work_authorization'),
   preferences: text('preferences', { mode: 'json' }).$type<Preferences>(),
   ...timestamps,
@@ -108,6 +110,8 @@ export const resumes = sqliteTable(
     content: encryptedJson<MasterCvContent>()('content').notNull(),
     pdfPath: text('pdf_path'),
     docxPath: text('docx_path'),
+    /** Truth-guard result, warnings and change log of a tailored resume. */
+    checks: text('checks', { mode: 'json' }),
     notes: text('notes'),
     createdAt: text('created_at').notNull().default(now),
   },
@@ -123,6 +127,9 @@ export const coverLetters = sqliteTable('cover_letters', {
   txtPath: text('txt_path'),
   pdfPath: text('pdf_path'),
   docxPath: text('docx_path'),
+  /** Verification issues (generic phrases, unverified claims, invented figures). */
+  checks: text('checks', { mode: 'json' }),
+  editedByUser: integer('edited_by_user', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull().default(now),
 });
 

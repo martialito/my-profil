@@ -10,12 +10,12 @@ Il est construit par phases. Ce README décrit ce qui fonctionne **réellement**
 | 1 | Setup, base de données, profil candidat, import CV, Master CV, Settings | ✅ fait |
 | 2 | Recherche d'offres, base d'offres, déduplication | ✅ fait |
 | 3 | Analyse LLM, scoring, compatibilité des dates | ✅ fait |
-| 4 | CV personnalisé, lettre de motivation | ⏳ à faire |
+| 4 | CV personnalisé, lettre de motivation | ✅ fait |
 | 5 | Dashboard complet, suivi des candidatures, notifications | ⏳ à faire (compteurs du dashboard déjà branchés sur la base) |
 | 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ⏳ à faire |
 | 7 | Envoi réel des candidatures | ⏳ à faire |
 
-Les commandes `generate`, `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
+Les commandes `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
 (code de sortie 2, message « planned for Phase N ») tant que la phase n'est pas implémentée.
 
 ## Stack
@@ -49,7 +49,7 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 |---|---|
 | `npm run dev` | API (rechargement auto) + interface Vite |
 | `npm run build` / `npm run start` | build de production (`dist/`), puis serveur unique sur le port 3001 qui sert aussi l'interface |
-| `npm run test` | tests (141 tests) |
+| `npm run test` | tests (159 tests) |
 | `npm run lint` | ESLint + vérification TypeScript |
 | `npm run status` | résumé : complétude du profil, version du Master CV, mode, test mode |
 | `npm run db:migrate` | applique les migrations (fait aussi automatiquement au démarrage) |
@@ -57,7 +57,8 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 | `npm run gen:key` | génère une clé de chiffrement |
 | `npm run search` | lance la recherche sur les boards Greenhouse/Lever configurés |
 | `npm run analyze [-- --limit=N]` | analyse avec Claude les offres pas encore analysées (50 max par défaut) |
-| `npm run generate / apply / dry-run` | réservées aux phases 4 à 7 (pas encore implémentées) |
+| `npm run generate [-- --limit=N]` | génère CV + lettre pour les offres GREEN/YELLOW qui n'en ont pas encore |
+| `npm run apply / dry-run` | réservées aux phases 6 et 7 (pas encore implémentées) |
 
 ## Ce qui fonctionne (Phase 1)
 
@@ -172,6 +173,34 @@ La page de l'offre affiche le score, les barres par critère, les compétences t
 les points d'attention, les plafonds appliqués, le détail des dates, le modèle et le coût estimé.
 Coût indicatif avec `claude-opus-5-5` : environ 3–4 centimes par offre (modifiable dans Settings, ex. `claude-sonnet-5-5`).
 
+## Ce qui fonctionne (Phase 4)
+
+### CV personnalisé (`src/cv/tailor.ts`, prompt `resume-customization.txt`)
+- Claude **ne réécrit pas** le CV librement : il choisit des expériences/formations du Master CV **par leur numéro**,
+  reformule les puces, écrit le titre et le résumé, et choisit des compétences. Le code recopie entreprises, intitulés,
+  lieux, dates, écoles, diplômes et GPA depuis le Master CV : ils ne peuvent pas être modifiés.
+- Le **garde-fou de véracité** est appliqué systématiquement : compétence absente du Master CV → retirée ; puce avec un
+  chiffre inventé → remplacée par la puce originale ; résumé avec un chiffre inventé → résumé du Master CV.
+  S'il reste une violation, aucun fichier n'est produit. Les langues du Master CV sont toujours conservées.
+- Détection du *keyword stuffing* (mot-clé répété plus de 4 fois).
+- Fichiers : `generated/cv/{job_id}/resume.pdf`, `resume.docx`, `metadata.json` (+ historique `v1/`, `v2/`…).
+  Mise en page ATS : une colonne, titres standards, vrai texte (vérifié par relecture automatique du PDF/DOCX).
+
+### Lettre de motivation (`src/cover-letter/`, prompt `cover-letter.txt`)
+- Utilise uniquement le Master CV, **vos motivations** (nouveau champ dans *My Profile*) et l'offre.
+  Sans motivations écrites, la lettre reste factuelle et n'invente aucun « rêve » ou raison personnelle.
+- Chaque affirmation doit citer mot pour mot sa source. Sont signalés : formules toutes faites (« I am writing to express
+  my keen interest »…), affirmations sans citation, chiffres absents de vos documents, entreprise non nommée, longueur.
+  En cas de problème, Claude réécrit une fois avec ces remarques ; s'il en reste, la lettre est marquée « à relire ».
+- Vous pouvez **modifier la lettre** dans l'interface : nouvelle version, re-vérifiée et re-générée en PDF/DOCX/TXT.
+- Fichiers : `generated/cover-letters/{job_id}/cover-letter.pdf`, `.docx`, `.txt`, `metadata.json` (+ `v1/`…).
+
+### Règles de déclenchement
+GREEN et YELLOW (réglable dans *Settings → Documents*) : génération par « Generate CVs & letters » ou `npm run generate`.
+RED ou offre non analysée : rien n'est généré automatiquement ; bouton « Generate anyway » sur l'offre.
+Chaque génération crée/avance la candidature correspondante (CV_CREATED → COVER_LETTER_CREATED) avec un historique ;
+elle reste une **simulation** tant que rien n'a été envoyé (Phases 6-7).
+
 ## Sécurité et données personnelles
 
 - Le serveur écoute uniquement sur `127.0.0.1` par défaut.
@@ -186,8 +215,8 @@ Coût indicatif avec `claude-opus-5-5` : environ 3–4 centimes par offre (modif
 - Sorties structurées validées par Zod (`messages.parse`).
 - La *temperature* est ignorée pour les modèles qui ne l'acceptent plus (famille Opus 5.x) ; la profondeur se règle avec *effort*.
 - Le *refusal fallback* serveur d'Anthropic (bêta) est activé par défaut pour les modèles compatibles ; désactivable dans Settings.
-- Les prompts sont dans `/prompts/*.txt`. `cv-extraction.txt` et `job-analysis.txt` sont utilisés ; les autres
-  (`job-ranking`, `resume-customization`, `cover-letter`, `application-question`) sont des brouillons pour les phases 4 à 6.
+- Les prompts sont dans `/prompts/*.txt`. `cv-extraction.txt`, `job-analysis.txt`, `resume-customization.txt` et `cover-letter.txt` sont utilisés ;
+  `job-ranking.txt` et `application-question.txt` sont des brouillons (Phase 6).
   Le classement des offres se fait par le score calculé (pas d'appel LLM supplémentaire).
 
 ## Architecture
@@ -198,15 +227,17 @@ src/
   config/                 variables d'environnement (validées) et chemins
   database/               schéma Drizzle (15 tables + cv_documents), client, migrations
   models/                 schémas Zod + types partagés backend/frontend
-  services/               logique métier (profil, settings, Master CV, import CV)
-  cv/                     extraction texte PDF/DOCX, extraction heuristique / LLM, truth-guard
+  services/               logique métier (profil, settings, Master CV, import CV, recherche, analyse, documents)
+  cv/                     extraction CV, truth-guard, personnalisation (tailor) et rendu PDF/DOCX du CV
   llm/                    interface LlmProvider, implémentation Anthropic, chargement des prompts
   api/                    application Express + routes
   frontend/               interface React (Vite)
   utils/                  chiffrement, logger, erreurs
   job-search/             connecteurs Greenhouse/Lever, filtres NYC/stage, extraction, déduplication, requêtes
   job-analysis/           isDateCompatible, schéma de sortie LLM, formule de score et plafonds
-  cover-letter/ application/ browser/ notifications/
+  cover-letter/           vérification et rendu PDF/DOCX des lettres
+  documents/              utilitaires de rendu communs
+  application/ browser/ notifications/
                           modules des phases suivantes (README de cadrage uniquement)
   server.ts, cli.ts       points d'entrée
 tests/                    tests Vitest (+ génération de CV PDF/DOCX fictifs)

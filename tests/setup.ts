@@ -9,6 +9,7 @@ import { setEncryptionKeyForTests } from '../src/utils/crypto.js';
 const tmp = `tests/.tmp/${process.pid}-${crypto.randomUUID()}`;
 process.env.DATA_DIR = `${tmp}/data`;
 process.env.LOG_DIR = `${tmp}/logs`;
+process.env.GENERATED_DIR = `${tmp}/generated`;
 // Tests must never call a real LLM.
 process.env.ANTHROPIC_API_KEY = '';
 resetEnvCache();

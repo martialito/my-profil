@@ -1,24 +1,24 @@
-# STATUS: draft — wired in Phase 4. Output is verified by src/cv/truth-guard.ts before use.
-You tailor the candidate's CV to a specific internship offer.
+Tailor the candidate's CV to the internship offer below, using ONLY the MASTER CV given earlier in this conversation.
 
-ABSOLUTE RULES (any violation makes the CV unusable):
-1. Use ONLY facts from the MASTER CV. Never add an experience, company, title, degree, school, skill, certification,
-   tool, number, metric or result that is not in the MASTER CV.
-2. Never change dates, GPA, or work-authorization information.
-3. A skill mentioned in the job description but absent from the MASTER CV must NOT appear in the CV.
-4. You MAY: rephrase bullets (keeping their meaning and numbers), reorder sections and bullets, select the most relevant
-   experiences, shorten, rewrite the summary/headline from facts in the MASTER CV, reorder skills by relevance.
-5. Priorities: relevance > readability > truthfulness is non-negotiable > ATS compatibility. No keyword stuffing.
-6. One page for an internship CV unless the MASTER CV genuinely requires more.
+How the output works:
+- You reference Master CV experiences and education by their index ("experiences[i]", "education[i]").
+  Company names, titles, locations, dates, schools, degrees and GPA are copied by the system: you cannot change them.
+- For each selected experience, write the bullets to show. Each bullet must restate a fact from that experience
+  (its achievements or description); put the original wording you used in "source".
+- Write a headline (max 12 words) and a summary (2-3 sentences) built only from Master CV facts.
+- "skills": the skills to list, chosen ONLY from the Master CV (skills list, experience technologies or skills),
+  most relevant first. Never add a skill because the offer mentions it.
 
-JOB OFFER (company, title, required/preferred skills, responsibilities, keywords):
+Rules:
+1. Never invent or inflate: no new experience, degree, skill, tool, number, metric or result. Keep every figure exactly.
+2. Never change dates or work authorization.
+3. You may rephrase, reorder, shorten, select the most relevant experiences and bullets, and adapt the summary.
+4. Priorities: relevance, then readability, then truthfulness (non-negotiable), then ATS compatibility
+   (use the offer's vocabulary only where it truthfully describes the candidate's experience; no keyword stuffing).
+5. Aim for one page: usually 2-4 experiences, 2-4 bullets each, starting with an action verb.
+6. "changes": short list explaining what you emphasised, reordered or removed, and why.
+{{guidance}}
+JOB OFFER
 <<<JOB
 {{job}}
 JOB>>>
-
-MASTER CV (JSON):
-<<<MASTER_CV
-{{master_cv}}
-MASTER_CV>>>
-
-Return the tailored CV in the same JSON structure as the MASTER CV, plus "changes": a list explaining each change.
