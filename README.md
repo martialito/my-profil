@@ -9,13 +9,13 @@ Il est construit par phases. Ce README décrit ce qui fonctionne **réellement**
 |---|---|---|
 | 1 | Setup, base de données, profil candidat, import CV, Master CV, Settings | ✅ fait |
 | 2 | Recherche d'offres, base d'offres, déduplication | ✅ fait |
-| 3 | Analyse LLM, scoring, compatibilité des dates | ⏳ à faire |
+| 3 | Analyse LLM, scoring, compatibilité des dates | ✅ fait |
 | 4 | CV personnalisé, lettre de motivation | ⏳ à faire |
 | 5 | Dashboard complet, suivi des candidatures, notifications | ⏳ à faire (compteurs du dashboard déjà branchés sur la base) |
 | 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ⏳ à faire |
 | 7 | Envoi réel des candidatures | ⏳ à faire |
 
-Les commandes `analyze`, `generate`, `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
+Les commandes `generate`, `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
 (code de sortie 2, message « planned for Phase N ») tant que la phase n'est pas implémentée.
 
 ## Stack
@@ -49,14 +49,15 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 |---|---|
 | `npm run dev` | API (rechargement auto) + interface Vite |
 | `npm run build` / `npm run start` | build de production (`dist/`), puis serveur unique sur le port 3001 qui sert aussi l'interface |
-| `npm run test` | tests (106 tests) |
+| `npm run test` | tests (141 tests) |
 | `npm run lint` | ESLint + vérification TypeScript |
 | `npm run status` | résumé : complétude du profil, version du Master CV, mode, test mode |
 | `npm run db:migrate` | applique les migrations (fait aussi automatiquement au démarrage) |
 | `npm run db:generate` | génère une nouvelle migration après modification de `src/database/schema.ts` |
 | `npm run gen:key` | génère une clé de chiffrement |
 | `npm run search` | lance la recherche sur les boards Greenhouse/Lever configurés |
-| `npm run analyze / generate / apply / dry-run` | réservées aux phases 3 à 7 (pas encore implémentées) |
+| `npm run analyze [-- --limit=N]` | analyse avec Claude les offres pas encore analysées (50 max par défaut) |
+| `npm run generate / apply / dry-run` | réservées aux phases 4 à 7 (pas encore implémentées) |
 
 ## Ce qui fonctionne (Phase 1)
 
@@ -121,7 +122,7 @@ et collez l'offre. Une URL Greenhouse/Lever collée est récupérée via l'API p
 ### Données extraites de chaque offre
 Entreprise, poste, lieu, description, responsabilités, exigences, salaire, type de contrat, durée, date de début/fin, période
 mentionnée (« Summer 2027 », « March - August 2027 »…), date de publication, URL de candidature, source.
-Uniquement ce qui est **écrit** dans l'offre (rien n'est déduit). Les compétences et l'interprétation des dates viendront de l'analyse (Phase 3).
+Uniquement ce qui est **écrit** dans l'offre (rien n'est déduit). Les compétences et l’interprétation des dates sont produites par l’analyse (Phase 3).
 Une offre qui disparaît de son board est marquée *closed*. Une nouvelle recherche met à jour les offres sans toucher à leur statut.
 
 ### Déduplication
@@ -132,9 +133,44 @@ Une offre qui disparaît de son board est marquée *closed*. Une nouvelle recher
 ### Job Search / Job details
 Tableau (entreprise, poste, lieu, salaire, publication, début, durée, source, score, statut) avec filtres (texte, score,
 zone, lieu, durée, début, source, statut, offres fermées), actions *View / Shortlist / Skip*. La page d'une offre affiche tous
-les détails et les autres sources de la même offre. Le score affiche « — » tant que la Phase 3 n'est pas faite.
+les détails et les autres sources de la même offre. Le score affiche « — » tant que l’offre n’a pas été analysée.
 
 > Derrière un proxy d'entreprise, Node n'utilise pas `HTTPS_PROXY` par défaut : lancez avec `NODE_USE_ENV_PROXY=1`.
+
+## Ce qui fonctionne (Phase 3)
+
+### Compatibilité des dates — `isDateCompatible(job)` (`src/job-analysis/dates.ts`)
+Calcul **sans IA**, au mois près, contre votre disponibilité (Settings, par défaut 2027-03 → 2027-08) :
+
+| Offre | Résultat |
+|---|---|
+| « March 2027 », « Start date: April 2027 » | COMPATIBLE |
+| « Summer 2027 » (juin–août) | COMPATIBLE (précision « saison ») |
+| « March-August 2027 », « 6-month internship starting March 2027 » | COMPATIBLE |
+| « January-February 2027 », « September 2027 start », « Fall 2027 », « Summer 2026 » | INCOMPATIBLE |
+| « 12 months starting June 2027 », « 12-month internship » | INCOMPATIBLE |
+| « Spring 2027 » (souvent janvier–mai aux US) | UNKNOWN : à confirmer |
+| « 6-month internship » sans date, aucune date, plusieurs périodes contradictoires | UNKNOWN |
+| départ avant mars mais « flexible start date » | UNKNOWN |
+
+UNKNOWN n'est jamais deviné et empêche le classement GREEN. Seules des dates précises (mois ou jour) rendent une offre
+« sûre » pour une future soumission automatique ; une saison ou des dates lues par l'IA ne le sont jamais.
+
+### Analyse et score (`npm run analyze`, boutons « Analyse » / « Analyse new offers »)
+1. **Contrôles déterministes** : dates, zone NYC, règle « stage uniquement » (visibles sans IA dans « Quick check »).
+2. **Claude** (prompt `prompts/job-analysis.txt`, sortie structurée validée) évalue compétences, expérience, formation
+   et préférences par rapport au **Master CV**, en citant ses preuves. Ne sont envoyés à Claude ni vos coordonnées
+   ni votre autorisation de travail. Le Master CV est envoyé en contexte mis en cache (prompt caching).
+3. **Vérifications** : une compétence « correspondante » sans preuve dans le Master CV est retirée ; une date ou une
+   mention de sponsorship lue par l'IA n'est utilisée que si la citation figure mot pour mot dans l'offre.
+4. **Score sur 100** = 30 % compétences + 20 % expérience + 10 % formation + 15 % localisation + 15 % dates
+   (UNKNOWN = 50) + 10 % préférences, puis **plafonds** : pas un stage → 30 max ; dates incompatibles → 40 ;
+   hors NYC → 40 ; l'offre exclut le sponsorship alors que vous en avez besoin → 40.
+5. **Classement** GREEN ≥ 90 / YELLOW ≥ 75 / RED (seuils dans Settings), jamais GREEN si les dates ne sont pas confirmées.
+
+La page de l'offre affiche le score, les barres par critère, les compétences trouvées / manquantes, les raisons,
+les points d'attention, les plafonds appliqués, le détail des dates, le modèle et le coût estimé.
+Coût indicatif avec `claude-opus-5-5` : environ 3–4 centimes par offre (modifiable dans Settings, ex. `claude-sonnet-5-5`).
 
 ## Sécurité et données personnelles
 
@@ -150,8 +186,9 @@ les détails et les autres sources de la même offre. Le score affiche « — »
 - Sorties structurées validées par Zod (`messages.parse`).
 - La *temperature* est ignorée pour les modèles qui ne l'acceptent plus (famille Opus 5.x) ; la profondeur se règle avec *effort*.
 - Le *refusal fallback* serveur d'Anthropic (bêta) est activé par défaut pour les modèles compatibles ; désactivable dans Settings.
-- Les prompts sont dans `/prompts/*.txt`. Seul `cv-extraction.txt` est utilisé aujourd'hui ; les autres
-  (`job-analysis`, `job-ranking`, `resume-customization`, `cover-letter`, `application-question`) sont des brouillons pour les phases 3 à 6.
+- Les prompts sont dans `/prompts/*.txt`. `cv-extraction.txt` et `job-analysis.txt` sont utilisés ; les autres
+  (`job-ranking`, `resume-customization`, `cover-letter`, `application-question`) sont des brouillons pour les phases 4 à 6.
+  Le classement des offres se fait par le score calculé (pas d'appel LLM supplémentaire).
 
 ## Architecture
 
@@ -168,7 +205,8 @@ src/
   frontend/               interface React (Vite)
   utils/                  chiffrement, logger, erreurs
   job-search/             connecteurs Greenhouse/Lever, filtres NYC/stage, extraction, déduplication, requêtes
-  job-analysis/ cover-letter/ application/ browser/ notifications/
+  job-analysis/           isDateCompatible, schéma de sortie LLM, formule de score et plafonds
+  cover-letter/ application/ browser/ notifications/
                           modules des phases suivantes (README de cadrage uniquement)
   server.ts, cli.ts       points d'entrée
 tests/                    tests Vitest (+ génération de CV PDF/DOCX fictifs)

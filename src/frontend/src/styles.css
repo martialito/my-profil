@@ -127,3 +127,27 @@ details { margin-top: 12px; }
 .description { white-space: pre-wrap; line-height: 1.5; }
 code { font-size: 12px; }
 @media (max-width: 760px) { .two-col.wide-right { grid-template-columns: 1fr; } .filters input:first-child { grid-column: auto; } }
+
+/* Phase 3: scores */
+.score { display: inline-block; min-width: 34px; text-align: center; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: var(--border); }
+.score.big { font-size: 28px; min-width: 64px; padding: 8px; }
+.c-green { background: var(--ok-bg); color: var(--ok-fg); }
+.c-yellow { background: var(--warn-bg); color: var(--warn-fg); }
+.c-red { background: var(--err-bg); color: var(--err-fg); }
+.cat { padding: 2px 8px; border-radius: 4px; }
+.score-head { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.small { font-size: 12px; }
+.bar-row { display: grid; grid-template-columns: 100px 1fr 48px; gap: 10px; align-items: center; margin: 5px 0; }
+.bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bar > div { height: 100%; background: var(--accent); }
+.bar > div.unknown { background: transparent; }
+.date-badge { font-size: 11px; font-weight: 600; padding: 1px 5px; border-radius: 4px; }
+.d-compatible { background: var(--ok-bg); color: var(--ok-fg); }
+.d-incompatible { background: var(--err-bg); color: var(--err-fg); }
+.d-unknown { background: var(--warn-bg); color: var(--warn-fg); }
+.date-explain ul { margin: 6px 0; padding-left: 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--info-bg); color: var(--info-fg); }
+.chip.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.chip.miss { background: var(--err-bg); color: var(--err-fg); }
+.two-col.even { grid-template-columns: 1fr 1fr; }

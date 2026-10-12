@@ -13,6 +13,16 @@ const NO_SAMPLING_MODELS = /^claude-(fable|mythos|opus-5|opus-4-[78]|sonnet-5|ha
 /** Models accepting the server-side refusal fallback ("default" routing). */
 const FALLBACK_MODELS = /^claude-(fable-5-1|opus-5|sonnet-5-5)/;
 
+function usageOf(res: Anthropic.Beta.BetaMessage) {
+  return {
+    inputTokens: res.usage.input_tokens,
+    outputTokens: res.usage.output_tokens,
+    cacheReadTokens: res.usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: res.usage.cache_creation_input_tokens ?? 0,
+    model: res.model,
+  };
+}
+
 export class AnthropicProvider implements LlmProvider {
   readonly name = 'anthropic';
   private client: Anthropic | undefined;
@@ -34,6 +44,9 @@ export class AnthropicProvider implements LlmProvider {
     const content: Anthropic.Beta.BetaContentBlockParam[] = [];
     if (req.pdfBase64) {
       content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: req.pdfBase64 } });
+    }
+    if (req.cachedContext) {
+      content.push({ type: 'text', text: req.cachedContext, cache_control: { type: 'ephemeral' } });
     }
     content.push({ type: 'text', text: req.prompt });
 
@@ -59,7 +72,7 @@ export class AnthropicProvider implements LlmProvider {
       const res = await this.getClient().beta.messages.create({ ...params, output_config: { effort: config.effort } });
       this.check(res.stop_reason, res.model);
       const text = res.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('');
-      return { text, usage: { inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens, model: res.model } };
+      return { text, usage: usageOf(res) };
     } catch (err) {
       throw this.wrap(err);
     }
@@ -76,7 +89,7 @@ export class AnthropicProvider implements LlmProvider {
       if (res.parsed_output == null) throw new LlmError('Model output did not match the expected schema', 'invalid_output');
       return {
         data: res.parsed_output as z.infer<S>,
-        usage: { inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens, model: res.model },
+        usage: usageOf(res),
       };
     } catch (err) {
       throw this.wrap(err);

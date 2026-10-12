@@ -13,11 +13,18 @@ export interface LlmRequest {
   prompt: string;
   /** Optional attached document (e.g. a PDF CV) sent alongside the prompt. */
   pdfBase64?: string;
+  /**
+   * Large context identical across many calls (e.g. the Master CV). Sent first and marked
+   * cacheable so repeated job analyses reuse it (prompt caching).
+   */
+  cachedContext?: string;
 }
 
 export interface LlmUsage {
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
   model: string;
 }
 

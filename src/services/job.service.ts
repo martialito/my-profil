@@ -123,6 +123,7 @@ export class JobService {
   list(q: JobListQuery) {
     const latestScore = sql<number | null>`(select ja.overall_score from ${jobAnalysis} ja where ja.job_id = ${jobs.id} order by ja.id desc limit 1)`;
     const latestCategory = sql<string | null>`(select ja.category from ${jobAnalysis} ja where ja.job_id = ${jobs.id} order by ja.id desc limit 1)`;
+    const latestDate = sql<string | null>`(select ja.date_status from ${jobAnalysis} ja where ja.job_id = ${jobs.id} order by ja.id desc limit 1)`;
     const dupCount = sql<number>`(select count(*) from ${jobs} d where d.duplicate_group_id = ${jobs.id} and d.id != ${jobs.id})`;
     const where: SQL[] = [];
     if (!q.includeDuplicates) where.push(isCanonical);
@@ -134,6 +135,9 @@ export class JobService {
     if (q.duration) where.push(like(jobs.internshipDuration, `%${q.duration}%`));
     if (q.startDate) where.push(or(like(jobs.startDate, `%${q.startDate}%`), like(jobs.periodHints, `%${q.startDate}%`))!);
     if (q.minScore !== undefined && q.minScore > 0) where.push(sql`${latestScore} >= ${q.minScore}`);
+    if (q.category === 'NONE') where.push(sql`${latestCategory} is null`);
+    else if (q.category) where.push(sql`${latestCategory} = ${q.category}`);
+    if (q.dateStatus) where.push(sql`${latestDate} = ${q.dateStatus}`);
     if (q.q) {
       const t = `%${q.q}%`;
       where.push(or(like(jobs.title, t), like(jobs.company, t), like(jobs.department, t), like(jobs.description, t))!);
@@ -166,6 +170,7 @@ export class JobService {
         createdAt: jobs.createdAt,
         score: latestScore,
         category: latestCategory,
+        dateStatus: latestDate,
         duplicates: dupCount,
       })
       .from(jobs)

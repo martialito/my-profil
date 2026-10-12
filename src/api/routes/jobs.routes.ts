@@ -4,6 +4,7 @@ import type { Db } from '../../database/client.js';
 import { JobListQuerySchema, JobStatuses } from '../../models/job.js';
 import { JobSearchService } from '../../services/job-search.service.js';
 import { JobService } from '../../services/job.service.js';
+import { JobAnalysisService } from '../../services/job-analysis.service.js';
 
 export function jobsRoutes(db: Db, search: () => JobSearchService): Router {
   const r = Router();
@@ -19,6 +20,13 @@ export function jobsRoutes(db: Db, search: () => JobSearchService): Router {
     res.status(201).json(await search().importManual(req.body));
   });
   r.get('/:id', (req, res) => {
+    res.json(svc.get(Number(req.params.id)));
+  });
+  r.get('/:id/precheck', (req, res) => {
+    res.json(new JobAnalysisService(db).precheck(Number(req.params.id)));
+  });
+  r.post('/:id/analyze', async (req, res) => {
+    await new JobAnalysisService(db).analyze(Number(req.params.id));
     res.json(svc.get(Number(req.params.id)));
   });
   r.patch('/:id/status', (req, res) => {

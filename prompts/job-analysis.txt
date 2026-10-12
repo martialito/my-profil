@@ -1,30 +1,31 @@
-# STATUS: draft — wired in Phase 3 (job analysis & scoring).
-You evaluate how well ONE internship offer matches ONE candidate. Be factual and conservative.
+You assess how well ONE internship offer matches ONE candidate. Your output feeds a scoring formula,
+so each field must be factual, specific and conservative. The candidate's facts come ONLY from the MASTER CV
+given earlier in this conversation; never assume skills or experience that are not written there.
 
-Candidate availability: {{availability_start}} → {{availability_end}} (ideal duration: {{ideal_duration_months}} months).
-Candidate location preferences: {{preferred_locations}}
-Candidate preferences: {{preferences}}
-
-MASTER CV (the only source of truth about the candidate):
-<<<MASTER_CV
-{{master_cv}}
-MASTER_CV>>>
-
-JOB OFFER:
+JOB OFFER
 <<<JOB
 {{job}}
 JOB>>>
 
-Score each dimension from 0 to 100:
-- date_compatibility: overlap between the internship period and the availability. If the offer gives no usable dates
-  or duration, set date_status="UNKNOWN" and date_compatibility=null — never assume.
-- location_compatibility: is the job in New York City (Manhattan, Brooklyn, Queens, Bronx, Staten Island) or clearly
-  reachable from NYC? Remote-only roles: score by the candidate's work-mode preferences.
-- skills_match: skills required by the offer that the Master CV actually demonstrates. List them in matched_skills;
-  list required skills absent from the Master CV in missing_skills. Do not credit skills that are not in the Master CV.
-- experience_match, education_match, preferences_match.
-- overall_score: your weighted judgement; it must be consistent with the dimensions.
-
-red_flags: e.g. not an internship, full-time/permanent, senior/manager level, requires US citizenship/no sponsorship
-when the candidate needs it, unpaid in a way that conflicts with visa rules, start date outside availability.
-reasons: short, specific sentences explaining the score. Cite the offer, not generic statements.
+Return:
+- seniority / employment_type: as stated by the offer ("unclear" if not stated).
+- skills_required / skills_preferred: skills, tools and languages the offer asks for (short names, as written).
+- matched_skills: required or preferred skills the MASTER CV demonstrates. For each, "evidence" must quote the
+  exact words from the MASTER CV that prove it (skill name, technology, or achievement text). If you cannot quote
+  evidence, the skill is NOT matched.
+- missing_skills: required/preferred skills absent from the MASTER CV.
+- missing_requirements: other requirements not met or not evidenced (degree level, enrolment, years of experience,
+  language, availability, location, work authorization…).
+- skills_match, experience_match, education_match, preferences_match: integers 0-100.
+    skills_match: coverage of REQUIRED skills first, preferred second.
+    experience_match: relevance of the candidate's real experiences to the responsibilities.
+    education_match: fit between the candidate's studies (level, field, enrolment) and what the offer asks.
+    preferences_match: fit with the candidate's preferred industries, job titles, companies and work modes.
+- stated_period: the internship start/end as written in the offer ("YYYY-MM"), duration in months, and "evidence":
+  the exact sentence fragment from the offer. All null if the offer does not state them. Never infer from
+  application deadlines or graduation dates.
+- sponsorship: what the offer says about visa sponsorship / US work authorization, with the exact quote as evidence,
+  or "not_stated".
+- reasons: 3 to 6 short, specific sentences explaining the fit (cite the offer and the CV, no generic statements).
+- red_flags: e.g. not actually an internship, senior level, unpaid, location outside NYC, period outside the
+  availability, sponsorship conflict, requirements clearly out of reach. Empty if none.

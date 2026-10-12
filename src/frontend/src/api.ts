@@ -44,14 +44,27 @@ export interface JobRow {
   id: number; company: string; title: string; location: string | null; locationMatch: string | null; salary: string | null;
   postedDate: string | null; startDate: string | null; endDate: string | null; internshipDuration: string | null; periodHints: string[];
   department: string | null; sourceUrl: string; applicationUrl: string | null; source: string | null; status: string;
-  closedAt: string | null; createdAt: string; score: number | null; category: string | null; duplicates: number;
+  closedAt: string | null; createdAt: string; score: number | null; category: string | null; dateStatus: string | null; duplicates: number;
 }
-export interface JobDetail extends Omit<JobRow, 'score' | 'category' | 'duplicates'> {
+export interface JobDetail extends Omit<JobRow, 'score' | 'category' | 'dateStatus' | 'duplicates'> {
   description: string | null; requirements: string[]; responsibilities: string[]; skills: string[]; employmentType: string | null;
   workplaceType: string | null; sourceName: string | null; duplicatesOf: number | null; lastSeenAt: string | null;
   related: Array<{ id: number; title: string; company: string; sourceUrl: string; source: string | null }>;
-  analysis: null | Record<string, unknown>;
+  analysis: null | Analysis;
 }
+export interface DateCheck {
+  status: 'COMPATIBLE' | 'INCOMPATIBLE' | 'UNKNOWN'; score: number | null; precision: string;
+  period: { start?: string; end?: string; durationMonths?: number }; flexible: boolean; autoSubmitSafe: boolean; reasons: string[];
+}
+export interface Analysis {
+  id: number; overallScore: number; category: 'GREEN' | 'YELLOW' | 'RED'; dateStatus: string; dateCompatibility: number | null;
+  locationCompatibility: number | null; skillsMatch: number | null; experienceMatch: number | null; educationMatch: number | null;
+  preferencesMatch: number | null; reasons: string[]; missingRequirements: string[]; redFlags: string[]; matchedSkills: string[];
+  missingSkills: string[]; dateDetails: DateCheck | null; model: string | null; costUsd: number | null; createdAt: string;
+  scoreDetails: { caps: Array<{ max: number; reason: string }>; notes: string[]; rawFormulaScore: number; masterCvVersion: number } | null;
+}
+export interface Precheck { date: DateCheck; locationMatch: string; internship: { isInternship: boolean; reason?: string } }
+export interface AnalysisSummary { analyzed: number; green: number; yellow: number; red: number; errors: Array<{ jobId: number; company: string; title: string; reason: string }>; costUsd: number }
 export interface Board { id: number; provider: 'greenhouse' | 'lever'; token: string; companyName: string; enabled: boolean; lastFetchedAt: string | null; lastError: string | null; lastJobCount: number | null }
 export interface SearchStats { boards: number; fetched: number; kept: number; newJobs: number; updated: number; duplicatesGrouped: number; filteredNotInternship: number; filteredNotNyc: number; closed: number; errors: number }
 export interface SearchRun { id: number; trigger: string; startedAt: string; finishedAt: string | null; stats: SearchStats | null; errors: Array<{ board: string; reason: string }> | null }
@@ -63,6 +76,9 @@ export const api = {
   jobs: (params: Record<string, string>) => call<{ total: number; items: JobRow[] }>('GET', `/api/jobs?${new URLSearchParams(params)}`),
   job: (id: number) => call<JobDetail>('GET', `/api/jobs/${id}`),
   setJobStatus: (id: number, status: string) => call<JobDetail>('PATCH', `/api/jobs/${id}/status`, { status }),
+  precheck: (id: number) => call<Precheck>('GET', `/api/jobs/${id}/precheck`),
+  analyzeJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/analyze`),
+  analyzePending: (limit?: number) => call<AnalysisSummary>('POST', '/api/analysis/run', limit ? { limit } : {}),
   ungroupJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/ungroup`),
   importJob: (input: ManualJobInput) => call<{ kind: string; id: number; of?: number; warnings: string[] }>('POST', '/api/jobs/manual', input),
   jobSources: () => call<JobSource[]>('GET', '/api/jobs/sources'),

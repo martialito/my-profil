@@ -15,6 +15,13 @@
       "when": 1791793817239,
       "tag": "0001_job_search",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791796231267,
+      "tag": "0002_job_analysis_details",
+      "breakpoints": true
     }
   ]
 }

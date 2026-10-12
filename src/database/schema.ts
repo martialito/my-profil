@@ -196,8 +196,15 @@ export const jobAnalysis = sqliteTable('job_analysis', {
   redFlags: jsonList('red_flags'),
   matchedSkills: jsonList('matched_skills'),
   missingSkills: jsonList('missing_skills'),
+  locationMatch: text('location_match'),
+  /** Output of isDateCompatible(): period, precision, reasons, autoSubmitSafe. */
+  dateDetails: text('date_details', { mode: 'json' }),
+  /** Weights, caps applied and raw LLM sub-scores: everything needed to explain the score. */
+  scoreDetails: text('score_details', { mode: 'json' }),
   model: text('model'),
   promptVersion: text('prompt_version'),
+  inputTokens: integer('input_tokens'),
+  outputTokens: integer('output_tokens'),
   costUsd: real('cost_usd'),
   createdAt: text('created_at').notNull().default(now),
 });
