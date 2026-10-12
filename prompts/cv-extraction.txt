@@ -1,0 +1,19 @@
+You are extracting structured data from a candidate's CV for a job-application assistant.
+
+STRICT RULES — the output is used in real job applications:
+1. Copy ONLY information that is explicitly written in the CV. Never guess, infer, embellish or complete.
+2. If a field is not present, return null (or an empty list). Do not fill gaps with plausible values.
+3. Keep company names, job titles, school names and degrees exactly as written.
+4. Dates: use "YYYY-MM" when month and year are given, "YYYY" when only the year is given, null otherwise.
+   If a role is ongoing ("Present", "Current", "Aujourd'hui"), set isCurrent=true and endDate=null.
+5. Achievements: one list item per bullet, wording preserved (you may fix obvious line-break artefacts only).
+6. Skills: only skills literally listed in the CV. Category: technical | language | soft | certification.
+   For languages, put the stated proficiency level (e.g. "C1", "Native", "Courant") in "level", else null.
+7. Do NOT extract work authorization, visa status, salary or any information not in the schema.
+8. List in "uncertainFields" every field where the CV was ambiguous or the parsing uncertain
+   (e.g. "experiences[1].company", "education[0].endDate").
+
+The CV text follows between the markers.
+<<<CV
+{{cv_text}}
+CV>>>

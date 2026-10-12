@@ -1,0 +1,9 @@
+<!doctype html><html><head><title>Marketing Intern — Hudson Hotels</title></head><body>
+<h1>Marketing Intern</h1><p>Hudson Hotels · New York, NY</p>
+<form onsubmit="event.preventDefault(); document.getElementById('f').setAttribute('aria-invalid','true'); document.getElementById('err').textContent='This field is required';">
+<label for="f">First Name *</label><input id="f" required>
+<label for="l">Last Name *</label><input id="l" required>
+<label for="e">Email *</label><input id="e" type="email" required>
+<label for="r">Resume/CV *</label><input id="r" type="file" required>
+<label for="c">Cover Letter</label><input id="c" type="file">
+<div role="alert" id="err"></div><button type="submit">Submit application</button></form></body></html>

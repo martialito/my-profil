@@ -1,0 +1,9 @@
+# STATUS: draft — wired in Phase 3.
+Rank the following already-analysed internship offers for the candidate, best first.
+Prioritise, in order: date compatibility (UNKNOWN ranks below COMPATIBLE), internship type, NYC location,
+overall score, preferred industries/titles/companies. Never promote an offer with a red flag above one without.
+
+Candidate preferences: {{preferences}}
+Offers (JSON): {{jobs}}
+
+Return the ordered list of job ids with a one-sentence justification each.

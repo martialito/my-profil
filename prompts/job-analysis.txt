@@ -1,0 +1,31 @@
+You assess how well ONE internship offer matches ONE candidate. Your output feeds a scoring formula,
+so each field must be factual, specific and conservative. The candidate's facts come ONLY from the MASTER CV
+given earlier in this conversation; never assume skills or experience that are not written there.
+
+JOB OFFER
+<<<JOB
+{{job}}
+JOB>>>
+
+Return:
+- seniority / employment_type: as stated by the offer ("unclear" if not stated).
+- skills_required / skills_preferred: skills, tools and languages the offer asks for (short names, as written).
+- matched_skills: required or preferred skills the MASTER CV demonstrates. For each, "evidence" must quote the
+  exact words from the MASTER CV that prove it (skill name, technology, or achievement text). If you cannot quote
+  evidence, the skill is NOT matched.
+- missing_skills: required/preferred skills absent from the MASTER CV.
+- missing_requirements: other requirements not met or not evidenced (degree level, enrolment, years of experience,
+  language, availability, location, work authorization…).
+- skills_match, experience_match, education_match, preferences_match: integers 0-100.
+    skills_match: coverage of REQUIRED skills first, preferred second.
+    experience_match: relevance of the candidate's real experiences to the responsibilities.
+    education_match: fit between the candidate's studies (level, field, enrolment) and what the offer asks.
+    preferences_match: fit with the candidate's preferred industries, job titles, companies and work modes.
+- stated_period: the internship start/end as written in the offer ("YYYY-MM"), duration in months, and "evidence":
+  the exact sentence fragment from the offer. All null if the offer does not state them. Never infer from
+  application deadlines or graduation dates.
+- sponsorship: what the offer says about visa sponsorship / US work authorization, with the exact quote as evidence,
+  or "not_stated".
+- reasons: 3 to 6 short, specific sentences explaining the fit (cite the offer and the CV, no generic statements).
+- red_flags: e.g. not actually an internship, senior level, unpaid, location outside NYC, period outside the
+  availability, sponsorship conflict, requirements clearly out of reach. Empty if none.
