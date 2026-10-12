@@ -27,6 +27,7 @@ async function call<T>(method: string, url: string, body?: unknown): Promise<T> 
 
 export interface Completeness { score: number; missing: string[] }
 export interface DashboardData {
+  lastSearch: SearchRun | null;
   stats: Record<
     'totalJobs' | 'newJobs' | 'matchingJobs' | 'highMatch' | 'applicationsPrepared' | 'applicationsSubmitted' | 'needsValidation' | 'interviews' | 'offers' | 'rejected',
     number
@@ -39,7 +40,39 @@ export interface DashboardData {
 export interface CvImportResult { id: number; originalFilename: string; sha256: string; method: 'heuristic' | 'llm'; textLength: number; draft: CvExtractionDraft }
 export interface CvImportRow { id: number; originalFilename: string; sizeBytes: number; status: string; extractionMethod: string | null; error: string | null; createdAt: string; sha256: string }
 
+export interface JobRow {
+  id: number; company: string; title: string; location: string | null; locationMatch: string | null; salary: string | null;
+  postedDate: string | null; startDate: string | null; endDate: string | null; internshipDuration: string | null; periodHints: string[];
+  department: string | null; sourceUrl: string; applicationUrl: string | null; source: string | null; status: string;
+  closedAt: string | null; createdAt: string; score: number | null; category: string | null; duplicates: number;
+}
+export interface JobDetail extends Omit<JobRow, 'score' | 'category' | 'duplicates'> {
+  description: string | null; requirements: string[]; responsibilities: string[]; skills: string[]; employmentType: string | null;
+  workplaceType: string | null; sourceName: string | null; duplicatesOf: number | null; lastSeenAt: string | null;
+  related: Array<{ id: number; title: string; company: string; sourceUrl: string; source: string | null }>;
+  analysis: null | Record<string, unknown>;
+}
+export interface Board { id: number; provider: 'greenhouse' | 'lever'; token: string; companyName: string; enabled: boolean; lastFetchedAt: string | null; lastError: string | null; lastJobCount: number | null }
+export interface SearchStats { boards: number; fetched: number; kept: number; newJobs: number; updated: number; duplicatesGrouped: number; filteredNotInternship: number; filteredNotNyc: number; closed: number; errors: number }
+export interface SearchRun { id: number; trigger: string; startedAt: string; finishedAt: string | null; stats: SearchStats | null; errors: Array<{ board: string; reason: string }> | null }
+export interface SearchQuery { domain: string; query: string; keywords: string; links: Array<{ platform: string; url: string }> }
+export interface JobSource { id: number; key: string; name: string; kind: string; automationAllowed: boolean; notes: string | null }
+export interface ManualJobInput { url: string; company?: string; title?: string; location?: string; description?: string; salary?: string }
+
 export const api = {
+  jobs: (params: Record<string, string>) => call<{ total: number; items: JobRow[] }>('GET', `/api/jobs?${new URLSearchParams(params)}`),
+  job: (id: number) => call<JobDetail>('GET', `/api/jobs/${id}`),
+  setJobStatus: (id: number, status: string) => call<JobDetail>('PATCH', `/api/jobs/${id}/status`, { status }),
+  ungroupJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/ungroup`),
+  importJob: (input: ManualJobInput) => call<{ kind: string; id: number; of?: number; warnings: string[] }>('POST', '/api/jobs/manual', input),
+  jobSources: () => call<JobSource[]>('GET', '/api/jobs/sources'),
+  boards: () => call<Board[]>('GET', '/api/search/boards'),
+  addBoard: (input: { url?: string; provider?: string; token?: string; companyName?: string }) => call<Board>('POST', '/api/search/boards', input),
+  updateBoard: (id: number, patch: { enabled?: boolean; companyName?: string }) => call<Board>('PATCH', `/api/search/boards/${id}`, patch),
+  removeBoard: (id: number) => fetch(`/api/search/boards/${id}`, { method: 'DELETE' }),
+  runSearch: () => call<{ runId: number; stats: SearchStats; errors: Array<{ board: string; reason: string }> }>('POST', '/api/search/run'),
+  searchRuns: () => call<SearchRun[]>('GET', '/api/search/runs'),
+  searchQueries: () => call<SearchQuery[]>('GET', '/api/search/queries'),
   dashboard: () => call<DashboardData>('GET', '/api/dashboard'),
   getProfile: () => call<{ profile: CandidateProfile; completeness: Completeness }>('GET', '/api/profile'),
   saveProfile: (p: CandidateProfileInput) => call<{ profile: CandidateProfile; completeness: Completeness }>('PUT', '/api/profile', p),

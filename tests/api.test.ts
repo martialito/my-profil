@@ -55,6 +55,6 @@ describe('HTTP API', () => {
   });
 
   it('unknown API route → 404 JSON', async () => {
-    expect((await request(app).get('/api/jobs')).status).toBe(404);
+    expect((await request(app).get('/api/does-not-exist')).status).toBe(404);
   });
 });

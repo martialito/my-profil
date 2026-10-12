@@ -9,9 +9,9 @@ import { ProfileService } from './services/profile.service.js';
 import { SettingsService } from './services/settings.service.js';
 import { profileCompleteness } from './models/profile.js';
 import { generateKey } from './utils/crypto.js';
+import { JobSearchService } from './services/job-search.service.js';
 
 const PLANNED: Record<string, { phase: number; description: string }> = {
-  search: { phase: 2, description: 'search new internship offers from enabled sources' },
   analyze: { phase: 3, description: 'score jobs against the Master CV with Claude' },
   generate: { phase: 4, description: 'generate tailored CVs and cover letters' },
   'dry-run': { phase: 6, description: 'full pipeline with simulated submission (nothing is sent)' },
@@ -46,13 +46,27 @@ switch (cmd) {
   case 'status':
     status();
     break;
+  case 'search': {
+    const db = getDb();
+    const svc = new JobSearchService(db);
+    if (svc.listBoards().filter((b) => b.enabled).length === 0) {
+      console.error('No company board configured. Add Greenhouse/Lever boards in the "Sources" page first.');
+      closeDb();
+      process.exit(1);
+    }
+    const res = await svc.run('cli');
+    console.log(JSON.stringify(res.stats, null, 2));
+    for (const e of res.errors) console.error(`[ERROR] ${e.board}: ${e.reason}`);
+    closeDb();
+    break;
+  }
   default: {
     const planned = cmd ? PLANNED[cmd] : undefined;
     if (planned) {
       console.error(`"${cmd}" (${planned.description}) is not implemented yet — planned for Phase ${planned.phase}.`);
       process.exit(2);
     }
-    console.error(`Unknown command "${cmd ?? ''}". Available: gen-key, migrate, status, ${Object.keys(PLANNED).join(', ')}`);
+    console.error(`Unknown command "${cmd ?? ''}". Available: gen-key, migrate, status, search, ${Object.keys(PLANNED).join(', ')}`);
     process.exit(1);
   }
 }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { count, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { Db } from '../../database/client.js';
-import { applications, jobAnalysis, jobs, notifications } from '../../database/schema.js';
+import { applications, jobAnalysis, jobs, notifications, searchRuns } from '../../database/schema.js';
 import { profileCompleteness } from '../../models/profile.js';
 import { MasterCvService } from '../../services/master-cv.service.js';
 import { ProfileService } from '../../services/profile.service.js';
@@ -10,6 +10,8 @@ import { SettingsService } from '../../services/settings.service.js';
 /** Real counts from the database. Phases not built yet simply report 0. */
 export function dashboardRoutes(db: Db): Router {
   const r = Router();
+  // One row per real offer: duplicates grouped under another job are not counted.
+  const canonical = or(isNull(jobs.duplicateGroupId), eq(jobs.duplicateGroupId, jobs.id));
   r.get('/', (_req, res) => {
     const c = (q: { count: number } | undefined) => q?.count ?? 0;
     const settings = new SettingsService(db).get();
@@ -17,8 +19,8 @@ export function dashboardRoutes(db: Db): Router {
     const master = new MasterCvService(db).latest();
     res.json({
       stats: {
-        totalJobs: c(db.select({ count: count() }).from(jobs).get()),
-        newJobs: c(db.select({ count: count() }).from(jobs).where(eq(jobs.status, 'FOUND')).get()),
+        totalJobs: c(db.select({ count: count() }).from(jobs).where(and(canonical, isNull(jobs.closedAt))).get()),
+        newJobs: c(db.select({ count: count() }).from(jobs).where(and(canonical, isNull(jobs.closedAt), eq(jobs.status, 'FOUND'))).get()),
         matchingJobs: c(db.select({ count: count() }).from(jobAnalysis).where(inArray(jobAnalysis.category, ['GREEN', 'YELLOW'])).get()),
         highMatch: c(db.select({ count: count() }).from(jobAnalysis).where(eq(jobAnalysis.category, 'GREEN')).get()),
         applicationsPrepared: c(db.select({ count: count() }).from(applications).where(eq(applications.status, 'READY_TO_APPLY')).get()),
@@ -30,6 +32,7 @@ export function dashboardRoutes(db: Db): Router {
       },
       profile: profileCompleteness(profile),
       masterCv: master ? { version: master.version, createdAt: master.createdAt } : null,
+      lastSearch: db.select().from(searchRuns).orderBy(desc(searchRuns.id)).limit(1).get() ?? null,
       testMode: settings.automation.testMode,
       applicationMode: settings.automation.applicationMode,
     });

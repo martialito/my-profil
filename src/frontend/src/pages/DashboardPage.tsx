@@ -42,9 +42,14 @@ export function DashboardPage() {
           </div>
         ))}
       </div>
-      <p className="muted">Job search, scoring and applications arrive in Phases 2–7; these counters read the real database and stay at 0 until then.</p>
+      <p className="muted">
+        {data.lastSearch?.stats
+          ? `Last search: ${new Date(data.lastSearch.startedAt).toLocaleString()} — ${data.lastSearch.stats.newJobs} new offer(s).`
+          : 'No search run yet.'}{' '}
+        Scoring and applications arrive in Phases 3–7; those counters stay at 0 until then.
+      </p>
 
-      <Card title="Getting started (Phase 1)">
+      <Card title="Getting started">
         <ol className="checklist">
           <li className={data.profile.score === 100 ? 'done' : ''}>
             <Link to="/profile">Complete your profile</Link> — {data.profile.score}%
@@ -56,6 +61,9 @@ export function DashboardPage() {
           </li>
           <li>
             <Link to="/settings">Check your search & automation settings</Link>
+          </li>
+          <li className={data.stats.totalJobs > 0 ? 'done' : ''}>
+            <Link to="/sources">Add company boards or import offers</Link> — {data.stats.totalJobs} offer(s) in the database
           </li>
         </ol>
       </Card>

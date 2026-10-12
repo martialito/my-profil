@@ -8,14 +8,14 @@ Il est construit par phases. Ce README décrit ce qui fonctionne **réellement**
 | Phase | Contenu | État |
 |---|---|---|
 | 1 | Setup, base de données, profil candidat, import CV, Master CV, Settings | ✅ fait |
-| 2 | Recherche d'offres, base d'offres, déduplication | ⏳ à faire |
+| 2 | Recherche d'offres, base d'offres, déduplication | ✅ fait |
 | 3 | Analyse LLM, scoring, compatibilité des dates | ⏳ à faire |
 | 4 | CV personnalisé, lettre de motivation | ⏳ à faire |
 | 5 | Dashboard complet, suivi des candidatures, notifications | ⏳ à faire (compteurs du dashboard déjà branchés sur la base) |
 | 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ⏳ à faire |
 | 7 | Envoi réel des candidatures | ⏳ à faire |
 
-Les commandes `search`, `analyze`, `generate`, `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
+Les commandes `analyze`, `generate`, `apply` et `dry-run` existent déjà mais **refusent de s'exécuter**
 (code de sortie 2, message « planned for Phase N ») tant que la phase n'est pas implémentée.
 
 ## Stack
@@ -49,13 +49,14 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 |---|---|
 | `npm run dev` | API (rechargement auto) + interface Vite |
 | `npm run build` / `npm run start` | build de production (`dist/`), puis serveur unique sur le port 3001 qui sert aussi l'interface |
-| `npm run test` | tests (53 tests) |
+| `npm run test` | tests (106 tests) |
 | `npm run lint` | ESLint + vérification TypeScript |
 | `npm run status` | résumé : complétude du profil, version du Master CV, mode, test mode |
 | `npm run db:migrate` | applique les migrations (fait aussi automatiquement au démarrage) |
 | `npm run db:generate` | génère une nouvelle migration après modification de `src/database/schema.ts` |
 | `npm run gen:key` | génère une clé de chiffrement |
-| `npm run search / analyze / generate / apply / dry-run` | réservées aux phases 2 à 7 (pas encore implémentées) |
+| `npm run search` | lance la recherche sur les boards Greenhouse/Lever configurés |
+| `npm run analyze / generate / apply / dry-run` | réservées aux phases 3 à 7 (pas encore implémentées) |
 
 ## Ce qui fonctionne (Phase 1)
 
@@ -95,6 +96,46 @@ Par défaut : **SEMI_AUTO** et **TEST MODE activé**. Tant que `TEST_MODE=true` 
 ### Dashboard
 Cartes branchées sur la base réelle (elles restent à 0 tant que les phases 2+ n'existent pas) et check-list de démarrage.
 
+## Ce qui fonctionne (Phase 2)
+
+### Sources et conditions d'utilisation
+| Source | Accès automatique | Méthode |
+|---|---|---|
+| Greenhouse | ✅ | API publique *Job Board* (`boards-api.greenhouse.io`), prévue pour publier les offres |
+| Lever | ✅ | API publique *Postings* (`api.lever.co`), prévue pour publier les offres |
+| LinkedIn, Indeed, Glassdoor, Welcome to the Jungle, Workday, sites carrières | ❌ | liens de recherche générés + **import manuel** (URL + texte collé) |
+
+Les pages LinkedIn/Indeed/etc. ne sont **jamais** téléchargées par l'application : vous ouvrez les liens dans votre navigateur
+et collez l'offre. Une URL Greenhouse/Lever collée est récupérée via l'API publique.
+
+### Page *Sources*
+- **Boards d'entreprises** : collez l'URL `job-boards.greenhouse.io/<nom>` ou `jobs.lever.co/<nom>` d'une entreprise ;
+  le board est vérifié avant d'être ajouté. *Run search now* (ou `npm run search`) interroge les boards un par un (1 s de pause).
+- **Filtres** : seuls les **stages** (intern, internship, co-op, summer analyst… dans le titre ou le type de contrat) situés à **NYC**
+  (Manhattan, Brooklyn, Queens, Bronx, Staten Island, LIC…) sont gardés ; « proche de NYC » (Jersey City, Hoboken…) est gardé et signalé ;
+  remote seulement si votre profil accepte le remote. Les postes senior / manager / full-time sont exclus.
+- **Import manuel** d'une offre, avec avertissement si elle ne ressemble pas à un stage à NYC.
+- **Liens de recherche** générés depuis le profil (intitulés, secteurs, expériences ; à défaut les 7 requêtes du cahier des charges).
+- **Historique** des recherches avec statistiques et erreurs par board.
+
+### Données extraites de chaque offre
+Entreprise, poste, lieu, description, responsabilités, exigences, salaire, type de contrat, durée, date de début/fin, période
+mentionnée (« Summer 2027 », « March - August 2027 »…), date de publication, URL de candidature, source.
+Uniquement ce qui est **écrit** dans l'offre (rien n'est déduit). Les compétences et l'interprétation des dates viendront de l'analyse (Phase 3).
+Une offre qui disparaît de son board est marquée *closed*. Une nouvelle recherche met à jour les offres sans toucher à leur statut.
+
+### Déduplication
+1. Même URL (après nettoyage : `utm_*`, `gh_src`, `/apply`, `www`, slash final…) ⇒ même offre, mise à jour.
+2. Même entreprise (normalisée : « Inc. », « LLC »…) + titre très proche + même zone + description similaire (shingles, Jaccard ≥ 0,5)
+   ⇒ regroupées : une seule ligne dans la liste, « +1 other source », et un bouton « Separate it » en cas d'erreur.
+
+### Job Search / Job details
+Tableau (entreprise, poste, lieu, salaire, publication, début, durée, source, score, statut) avec filtres (texte, score,
+zone, lieu, durée, début, source, statut, offres fermées), actions *View / Shortlist / Skip*. La page d'une offre affiche tous
+les détails et les autres sources de la même offre. Le score affiche « — » tant que la Phase 3 n'est pas faite.
+
+> Derrière un proxy d'entreprise, Node n'utilise pas `HTTPS_PROXY` par défaut : lancez avec `NODE_USE_ENV_PROXY=1`.
+
 ## Sécurité et données personnelles
 
 - Le serveur écoute uniquement sur `127.0.0.1` par défaut.
@@ -126,13 +167,14 @@ src/
   api/                    application Express + routes
   frontend/               interface React (Vite)
   utils/                  chiffrement, logger, erreurs
-  job-search/ job-analysis/ cover-letter/ application/ browser/ notifications/
+  job-search/             connecteurs Greenhouse/Lever, filtres NYC/stage, extraction, déduplication, requêtes
+  job-analysis/ cover-letter/ application/ browser/ notifications/
                           modules des phases suivantes (README de cadrage uniquement)
   server.ts, cli.ts       points d'entrée
 tests/                    tests Vitest (+ génération de CV PDF/DOCX fictifs)
 ```
 
-Tables : `users`, `candidate_profiles`, `education`, `experiences`, `skills`, `cv_documents`, `jobs`, `job_sources`,
+Tables : `users`, `candidate_profiles`, `education`, `experiences`, `skills`, `cv_documents`, `jobs`, `job_sources`, `company_boards`, `search_runs`,
 `job_analysis`, `resumes`, `cover_letters`, `applications`, `application_answers`, `application_events`, `settings`, `notifications`.
 
 Les logs vont dans la console et `logs/app.log`, au format `[08:02] message` ; les erreurs d'étape au format

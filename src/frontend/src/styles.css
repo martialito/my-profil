@@ -104,3 +104,26 @@ details { margin-top: 12px; }
   .content { padding: 16px; }
   .two-col { grid-template-columns: 1fr; }
 }
+
+/* Phase 2: jobs */
+.filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-items: center; }
+.filters input:first-child { grid-column: span 2; }
+.table-wrap { overflow-x: auto; }
+.table.jobs td { font-size: 13px; }
+.table tr.closed td { opacity: 0.55; }
+.nowrap { white-space: nowrap; }
+.status { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--info-bg); color: var(--info-fg); }
+.status.s-shortlisted { background: var(--ok-bg); color: var(--ok-fg); }
+.status.s-skipped { background: var(--err-bg); color: var(--err-fg); }
+.button-link { display: inline-block; padding: 7px 14px; border: 1px solid var(--accent); border-radius: 6px; text-decoration: none; font-weight: 600; }
+.error-text { color: var(--danger); font-size: 12px; }
+.links a { margin-right: 10px; white-space: nowrap; }
+.runs { padding-left: 18px; }
+.runs li { margin-bottom: 6px; }
+.two-col.wide-right { grid-template-columns: 320px 1fr; }
+.facts div { display: grid; grid-template-columns: 120px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.facts dt { color: var(--muted); font-size: 12px; }
+.facts dd { margin: 0; }
+.description { white-space: pre-wrap; line-height: 1.5; }
+code { font-size: 12px; }
+@media (max-width: 760px) { .two-col.wide-right { grid-template-columns: 1fr; } .filters input:first-child { grid-column: auto; } }

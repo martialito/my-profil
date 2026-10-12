@@ -8,6 +8,13 @@
       "when": 1791453003537,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791793817239,
+      "tag": "0001_job_search",
+      "breakpoints": true
     }
   ]
 }

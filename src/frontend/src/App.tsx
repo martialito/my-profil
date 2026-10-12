@@ -1,11 +1,13 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
+import { JobDetailsPage } from './pages/JobDetailsPage';
+import { JobsPage } from './pages/JobsPage';
+import { SourcesPage } from './pages/SourcesPage';
 import { MasterCvPage } from './pages/MasterCvPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 
 const PLANNED = [
-  { label: 'Job Search', phase: 2 },
   { label: 'Application Tracker', phase: 5 },
   { label: 'Answer Bank', phase: 6 },
 ];
@@ -16,6 +18,8 @@ export function App() {
       <nav className="sidebar">
         <div className="brand">NYC Internship Agent</div>
         <NavLink to="/" end>Dashboard</NavLink>
+        <NavLink to="/jobs">Job Search</NavLink>
+        <NavLink to="/sources">Sources</NavLink>
         <NavLink to="/profile">My Profile</NavLink>
         <NavLink to="/master-cv">Master CV</NavLink>
         <NavLink to="/settings">Settings</NavLink>
@@ -29,6 +33,9 @@ export function App() {
       <main className="content">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/jobs/:id" element={<JobDetailsPage />} />
+          <Route path="/sources" element={<SourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/master-cv" element={<MasterCvPage />} />
           <Route path="/settings" element={<SettingsPage />} />

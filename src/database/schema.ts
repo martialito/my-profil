@@ -164,6 +164,15 @@ export const jobs = sqliteTable(
     postedDate: text('posted_date'),
     applicationUrl: text('application_url'),
     status: text('status').notNull().default('FOUND'),
+    department: text('department'),
+    workplaceType: text('workplace_type'),
+    /** 'nyc' | 'near' | 'remote' — how the location filter matched. */
+    locationMatch: text('location_match'),
+    /** Free-text period hints found in the offer (e.g. "Summer 2027"). Parsed in Phase 3. */
+    periodHints: jsonList('period_hints'),
+    lastSeenAt: text('last_seen_at'),
+    /** Set when the offer disappeared from its source board. */
+    closedAt: text('closed_at'),
     raw: text('raw', { mode: 'json' }),
     ...timestamps,
   },
@@ -191,6 +200,32 @@ export const jobAnalysis = sqliteTable('job_analysis', {
   promptVersion: text('prompt_version'),
   costUsd: real('cost_usd'),
   createdAt: text('created_at').notNull().default(now),
+});
+
+/** Company job boards on ATS platforms exposing a public job-board API (Greenhouse, Lever). */
+export const companyBoards = sqliteTable(
+  'company_boards',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    provider: text('provider', { enum: ['greenhouse', 'lever'] }).notNull(),
+    token: text('token').notNull(),
+    companyName: text('company_name').notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    lastFetchedAt: text('last_fetched_at'),
+    lastError: text('last_error'),
+    lastJobCount: integer('last_job_count'),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('company_boards_provider_token_idx').on(t.provider, t.token)],
+);
+
+export const searchRuns = sqliteTable('search_runs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  trigger: text('trigger', { enum: ['manual', 'cli', 'schedule'] }).notNull(),
+  startedAt: text('started_at').notNull().default(now),
+  finishedAt: text('finished_at'),
+  stats: text('stats', { mode: 'json' }),
+  errors: text('errors', { mode: 'json' }).$type<Array<{ board: string; reason: string }>>(),
 });
 
 // ───────────────────────────── Applications ─────────────────────────────
