@@ -10,7 +10,9 @@ import type { Db } from '../database/client.js';
 import { applicationEvents, applications, coverLetters, jobAnalysis, jobs, resumes } from '../database/schema.js';
 import { getLlmProvider, llmConfigFromSettings, loadPrompt, renderPrompt } from '../llm/index.js';
 import type { MasterCvContent, MasterCvVersion } from '../models/master-cv.js';
-import { ApplicationStatuses, type ApplicationStatus } from '../models/statuses.js';
+import type { ApplicationStatus } from '../models/statuses.js';
+import { preparationTarget } from '../application/state-machine.js';
+import { NotificationService } from '../notifications/notification.service.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { cvForLlm } from './job-analysis.service.js';
@@ -108,9 +110,8 @@ export class DocumentsService {
     this.db.transaction((tx) => {
       let app = tx.select().from(applications).where(eq(applications.jobId, jobId)).get();
       if (!app) app = tx.insert(applications).values({ jobId, status: 'SHORTLISTED' }).returning().get();
-      const order = (s: string) => ApplicationStatuses.indexOf(s as ApplicationStatus);
-      // Never move an application backwards (e.g. an APPLIED one stays APPLIED).
-      const status = order(to) > order(app.status) ? to : app.status;
+      // Forward-only, preparation stages only: an APPLIED/INTERVIEW… application keeps its status.
+      const status = preparationTarget(app.status as ApplicationStatus, to);
       tx.update(applications).set({ ...patch, status, updatedAt: NOW }).where(eq(applications.id, app.id)).run();
       tx.insert(applicationEvents).values({ applicationId: app.id, type: 'document', fromStatus: app.status, toStatus: status, message }).run();
     });
@@ -260,6 +261,18 @@ export class DocumentsService {
       .returning({ id: coverLetters.id })
       .get();
     this.advanceApplication(job.id, 'COVER_LETTER_CREATED', { coverLetterId: row.id }, `Cover letter v${version} ${meta.edited ? 'edited by you' : 'generated'}`);
+    if (!meta.edited) {
+      new NotificationService(this.db).notify({
+        type: 'documents_ready',
+        level: 'action_required',
+        title: `Application for ${job.title} at ${job.company} requires your attention`,
+        message: checks.needsReview
+          ? 'CV and cover letter are prepared, but the letter has points to review before it can be used.'
+          : 'CV and cover letter are prepared. Review them before applying.',
+        link: `/jobs/${job.id}`,
+        dedupeKey: `documents:${job.id}:${version}`,
+      });
+    }
     logger.info(`Cover letter ${meta.edited ? 'saved' : 'generated'} for "${job.title}" at ${job.company} (v${version})`);
     return { id: row.id, version, text, checks, files };
   }

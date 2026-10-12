@@ -254,8 +254,10 @@ export const applications = sqliteTable('applications', {
   coverLetterId: integer('cover_letter_id').references(() => coverLetters.id, { onDelete: 'set null' }),
   isSimulation: integer('is_simulation', { mode: 'boolean' }).notNull().default(true),
   applicationDate: text('application_date'),
-  /** Set ONLY when the target site confirmed the submission. */
+  /** Set ONLY when the submission is confirmed (by the site, or by you for a manual application). */
   submittedAt: text('submitted_at'),
+  /** Who confirmed the submission: 'site' (automation saw a confirmation) or 'user' (you applied yourself). */
+  confirmationSource: text('confirmation_source', { enum: ['site', 'user'] }),
   confirmationText: text('confirmation_text'),
   confirmationUrl: text('confirmation_url'),
   screenshotPath: text('screenshot_path'),
@@ -302,6 +304,8 @@ export const notifications = sqliteTable('notifications', {
   title: text('title').notNull(),
   message: text('message').notNull(),
   link: text('link'),
+  /** Prevents the same reminder from being created twice (e.g. "followup:12:2026-10-15"). */
+  dedupeKey: text('dedupe_key').unique(),
   readAt: text('read_at'),
   createdAt: text('created_at').notNull().default(now),
 });

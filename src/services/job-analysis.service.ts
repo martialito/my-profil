@@ -14,6 +14,7 @@ import { sha256 } from '../utils/crypto.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { MasterCvService } from './master-cv.service.js';
+import { NotificationService } from '../notifications/notification.service.js';
 import { ProfileService } from './profile.service.js';
 import { SettingsService } from './settings.service.js';
 
@@ -172,6 +173,16 @@ export class JobAnalysisService {
       return inserted;
     });
     logger.info(`Analyzed "${job.title}" at ${job.company}: ${score.overall}/100 (${score.category})`);
+    if (score.category === 'GREEN') {
+      new NotificationService(this.db).notify({
+        type: 'high_match',
+        level: 'info',
+        title: `High match: ${job.title} at ${job.company} (${score.overall}/100)`,
+        message: score.reasons[0] ?? 'This offer matches your profile and your dates.',
+        link: `/jobs/${job.id}`,
+        dedupeKey: `high_match:${job.id}`,
+      });
+    }
     return { ...score, analysisId: row.id };
   }
 

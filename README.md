@@ -11,7 +11,7 @@ Il est construit par phases. Ce README décrit ce qui fonctionne **réellement**
 | 2 | Recherche d'offres, base d'offres, déduplication | ✅ fait |
 | 3 | Analyse LLM, scoring, compatibilité des dates | ✅ fait |
 | 4 | CV personnalisé, lettre de motivation | ✅ fait |
-| 5 | Dashboard complet, suivi des candidatures, notifications | ⏳ à faire (compteurs du dashboard déjà branchés sur la base) |
+| 5 | Dashboard complet, suivi des candidatures, notifications | ✅ fait |
 | 6 | Navigateur contrôlé, Answer Bank, TEST MODE, `dry-run` | ⏳ à faire |
 | 7 | Envoi réel des candidatures | ⏳ à faire |
 
@@ -49,7 +49,7 @@ npm run dev                # API sur http://127.0.0.1:3001, interface sur http:/
 |---|---|
 | `npm run dev` | API (rechargement auto) + interface Vite |
 | `npm run build` / `npm run start` | build de production (`dist/`), puis serveur unique sur le port 3001 qui sert aussi l'interface |
-| `npm run test` | tests (159 tests) |
+| `npm run test` | tests (172 tests) |
 | `npm run lint` | ESLint + vérification TypeScript |
 | `npm run status` | résumé : complétude du profil, version du Master CV, mode, test mode |
 | `npm run db:migrate` | applique les migrations (fait aussi automatiquement au démarrage) |
@@ -201,6 +201,35 @@ RED ou offre non analysée : rien n'est généré automatiquement ; bouton « Ge
 Chaque génération crée/avance la candidature correspondante (CV_CREATED → COVER_LETTER_CREATED) avec un historique ;
 elle reste une **simulation** tant que rien n'a été envoyé (Phases 6-7).
 
+## Ce qui fonctionne (Phase 5)
+
+### Dashboard
+Cartes TOTAL JOBS, RELEVANT, HIGH MATCH, APPLICATIONS, INTERVIEWS, OFFERS (cliquables) + nouvelles offres, candidatures
+préparées, à valider, envoyées (confirmées) et réponses reçues. Tableau des meilleures offres
+*Company | Position | Score | Start | Status | Action* avec **View, Analyze, Generate CV, Generate Letter, Apply, Skip**,
+activité récente et check-list de démarrage.
+
+**Apply** fonctionne aujourd'hui en mode **MANUAL** : il ouvre la page de l'offre, vous postulez vous-même, puis vous
+confirmez dans le tracker (« I submitted it », avec la date et, si vous l'avez, le message ou l'URL de confirmation).
+Le remplissage assisté du formulaire arrive en Phase 6.
+
+### Application Tracker
+- Statuts FOUND → … → READY_TO_APPLY → APPLIED → INTERVIEW / OFFER / REJECTED, WITHDRAWN, avec une **machine à états**
+  (`src/application/state-machine.ts`) : transitions interdites refusées avec un message clair, READY_TO_APPLY exige CV + lettre.
+- **APPLIED = soumission confirmée** : par vous (candidature manuelle) ou, en Phase 7, par la page de confirmation du site.
+  Une soumission simulée (test mode) ne peut jamais devenir APPLIED. La source de confirmation est enregistrée.
+- Enregistrés : date de candidature, statut, version du CV, version de la lettre, notes, date de relance, preuve,
+  et un **historique** de chaque changement.
+- **Relance** : date de candidature + N jours (Settings → *Follow-up after*, 7 par défaut : envoyée le 8 octobre 2026 →
+  relance le 15 octobre 2026), modifiable ; annulée automatiquement en cas de réponse.
+
+### Notifications (`src/notifications/`)
+Stockées en base et affichées dans le menu (compteur) et sur le dashboard. Créées automatiquement pour :
+offre GREEN trouvée, CV + lettre prêts à valider (« Application for Marketing Intern at XYZ requires your attention »),
+relance due (vérifiée au démarrage du serveur puis toutes les heures), erreur d'un board, nouvelles offres.
+Pas de doublon (clé de déduplication). Les canaux e-mail / Telegram / Discord ne sont pas implémentés :
+l'interface `NotificationChannel` est prête pour les ajouter.
+
 ## Sécurité et données personnelles
 
 - Le serveur écoute uniquement sur `127.0.0.1` par défaut.
@@ -235,10 +264,11 @@ src/
   utils/                  chiffrement, logger, erreurs
   job-search/             connecteurs Greenhouse/Lever, filtres NYC/stage, extraction, déduplication, requêtes
   job-analysis/           isDateCompatible, schéma de sortie LLM, formule de score et plafonds
+  application/            machine à états des candidatures, calcul des relances
+  notifications/          service de notifications (dashboard) et interface des canaux
   cover-letter/           vérification et rendu PDF/DOCX des lettres
   documents/              utilitaires de rendu communs
-  application/ browser/ notifications/
-                          modules des phases suivantes (README de cadrage uniquement)
+  browser/                module de la phase 6 (README de cadrage uniquement)
   server.ts, cli.ts       points d'entrée
 tests/                    tests Vitest (+ génération de CV PDF/DOCX fictifs)
 ```

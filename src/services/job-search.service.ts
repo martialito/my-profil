@@ -11,6 +11,7 @@ import { ManualJobSchema, type ManualJobInput, type SourceKey } from '../models/
 import { AppError, NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { JobService, type UpsertOutcome } from './job.service.js';
+import { NotificationService } from '../notifications/notification.service.js';
 import { ProfileService } from './profile.service.js';
 import { SettingsService } from './settings.service.js';
 
@@ -143,6 +144,13 @@ export class JobSearchService {
       }
     }
 
+    const notifier = new NotificationService(this.db);
+    for (const e of errors) {
+      notifier.notify({ type: 'search_error', level: 'error', title: `Job board error: ${e.board}`, message: e.reason, link: '/sources', dedupeKey: `search_error:${run.id}:${e.board}` });
+    }
+    if (stats.newJobs > 0) {
+      notifier.notify({ type: 'new_jobs', level: 'info', title: `${stats.newJobs} new internship offer(s)`, message: `Found by the search of ${new Date().toLocaleString()}.`, link: '/jobs?status=FOUND', dedupeKey: `new_jobs:${run.id}` });
+    }
     logger.info(`${stats.fetched} jobs found`);
     logger.info(`${stats.filteredNotInternship} non-internship and ${stats.filteredNotNyc} non-NYC offers filtered out`);
     logger.info(`${stats.newJobs} new, ${stats.updated} already known, ${stats.duplicatesGrouped} duplicates grouped`);

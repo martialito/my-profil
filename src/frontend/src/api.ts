@@ -26,17 +26,37 @@ async function call<T>(method: string, url: string, body?: unknown): Promise<T> 
 }
 
 export interface Completeness { score: number; missing: string[] }
+export interface TopJob {
+  id: number; company: string; title: string; startDate: string | null; periodHints: string[]; jobStatus: string; applicationUrl: string | null; sourceUrl: string;
+  score: number | null; category: string | null; dateStatus: string | null; applicationId: number | null; applicationStatus: string | null; hasResume: boolean | number; hasLetter: boolean | number;
+}
 export interface DashboardData {
   lastSearch: SearchRun | null;
+  lastAnalysis: { createdAt: string } | null;
   stats: Record<
-    'totalJobs' | 'newJobs' | 'matchingJobs' | 'highMatch' | 'applicationsPrepared' | 'applicationsSubmitted' | 'needsValidation' | 'interviews' | 'offers' | 'rejected',
+    'totalJobs' | 'newJobs' | 'matchingJobs' | 'highMatch' | 'applications' | 'applicationsPrepared' | 'applicationsSubmitted' | 'needsValidation' | 'responses' | 'interviews' | 'offers' | 'rejected',
     number
   >;
+  topJobs: TopJob[];
+  recentEvents: Array<{ id: number; message: string | null; toStatus: string | null; createdAt: string; company: string; title: string; applicationId: number }>;
+  notifications: NotificationCounts;
   profile: Completeness;
   masterCv: { version: number; createdAt: string } | null;
   testMode: boolean;
   applicationMode: string;
 }
+export interface NotificationCounts { unread: number; actionRequired: number }
+export interface AppNotification { id: number; type: string; level: string; title: string; message: string; link: string | null; readAt: string | null; createdAt: string }
+export interface ApplicationRow {
+  id: number; jobId: number; company: string; title: string; location: string | null; startDate: string | null; periodHints: string[]; applicationUrl: string | null; sourceUrl: string;
+  status: string; mode: string | null; isSimulation: boolean; applicationDate: string | null; submittedAt: string | null; confirmationSource: string | null; followUpDate: string | null;
+  notes: string | null; resumeVersion: number | null; letterVersion: number | null; score: number | null; category: string | null; updatedAt: string;
+}
+export interface ApplicationDetail extends ApplicationRow {
+  confirmationText: string | null; confirmationUrl: string | null; resumeId: number | null; coverLetterId: number | null;
+  events: Array<{ id: number; type: string; fromStatus: string | null; toStatus: string | null; message: string | null; createdAt: string }>;
+}
+export interface TransitionInput { to: string; note?: string; applicationDate?: string; confirmationText?: string; confirmationUrl?: string }
 export interface CvImportResult { id: number; originalFilename: string; sha256: string; method: 'heuristic' | 'llm'; textLength: number; draft: CvExtractionDraft }
 export interface CvImportRow { id: number; originalFilename: string; sizeBytes: number; status: string; extractionMethod: string | null; error: string | null; createdAt: string; sha256: string }
 
@@ -88,6 +108,15 @@ export const api = {
   generateDocuments: (id: number, body: { what: 'all' | 'resume' | 'cover-letter'; guidance?: string; force?: boolean }) => call<JobDocuments>('POST', `/api/jobs/${id}/documents`, body),
   saveLetter: (id: number, text: string) => call<JobDocuments>('PUT', `/api/jobs/${id}/documents/cover-letter`, { text }),
   generatePending: (limit?: number) => call<{ cvs: number; letters: number; errors: Array<{ jobId: number; company: string; title: string; reason: string }> }>('POST', '/api/documents/generate-pending', limit ? { limit } : {}),
+  applications: (params: Record<string, string> = {}) => call<ApplicationRow[]>('GET', `/api/applications?${new URLSearchParams(params)}`),
+  application: (id: number) => call<ApplicationDetail>('GET', `/api/applications/${id}`),
+  applicationForJob: (jobId: number) => call<ApplicationDetail>('POST', `/api/applications/for-job/${jobId}`),
+  transition: (id: number, input: TransitionInput) => call<ApplicationDetail>('POST', `/api/applications/${id}/transition`, input),
+  updateApplication: (id: number, patch: { notes?: string | null; followUpDate?: string | null }) => call<ApplicationDetail>('PATCH', `/api/applications/${id}`, patch),
+  notifications: (unread = false) => call<{ items: AppNotification[]; counts: NotificationCounts }>('GET', `/api/notifications${unread ? '?unread=true' : ''}`),
+  notificationCounts: () => call<NotificationCounts>('GET', '/api/notifications/counts'),
+  readNotification: (id: number) => call<NotificationCounts>('POST', `/api/notifications/${id}/read`),
+  readAllNotifications: () => call<NotificationCounts>('POST', '/api/notifications/read-all'),
   ungroupJob: (id: number) => call<JobDetail>('POST', `/api/jobs/${id}/ungroup`),
   importJob: (input: ManualJobInput) => call<{ kind: string; id: number; of?: number; warnings: string[] }>('POST', '/api/jobs/manual', input),
   jobSources: () => call<JobSource[]>('GET', '/api/jobs/sources'),
