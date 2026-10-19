@@ -1,0 +1,24 @@
+Tailor the candidate's CV to the internship offer below, using ONLY the MASTER CV given earlier in this conversation.
+
+How the output works:
+- You reference Master CV experiences and education by their index ("experiences[i]", "education[i]").
+  Company names, titles, locations, dates, schools, degrees and GPA are copied by the system: you cannot change them.
+- For each selected experience, write the bullets to show. Each bullet must restate a fact from that experience
+  (its achievements or description); put the original wording you used in "source".
+- Write a headline (max 12 words) and a summary (2-3 sentences) built only from Master CV facts.
+- "skills": the skills to list, chosen ONLY from the Master CV (skills list, experience technologies or skills),
+  most relevant first. Never add a skill because the offer mentions it.
+
+Rules:
+1. Never invent or inflate: no new experience, degree, skill, tool, number, metric or result. Keep every figure exactly.
+2. Never change dates or work authorization.
+3. You may rephrase, reorder, shorten, select the most relevant experiences and bullets, and adapt the summary.
+4. Priorities: relevance, then readability, then truthfulness (non-negotiable), then ATS compatibility
+   (use the offer's vocabulary only where it truthfully describes the candidate's experience; no keyword stuffing).
+5. Aim for one page: usually 2-4 experiences, 2-4 bullets each, starting with an action verb.
+6. "changes": short list explaining what you emphasised, reordered or removed, and why.
+{{guidance}}
+JOB OFFER
+<<<JOB
+{{job}}
+JOB>>>

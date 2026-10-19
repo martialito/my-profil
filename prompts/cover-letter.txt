@@ -1,0 +1,32 @@
+Write a cover letter for the internship offer below, as the candidate, in {{language}}.
+It must read like a real person wrote it for THIS company and THIS role, not like a template.
+
+Use only:
+- facts from the MASTER CV given earlier in this conversation,
+- the candidate's own motivations (below),
+- facts from the job offer.
+
+Rules:
+1. Never invent experience, results, figures, skills, motivations, or personal stories. If something is not in these
+   sources, leave it out rather than stretching it.
+2. Name the company and the role. Connect 2-3 specific responsibilities or required skills of the offer to concrete
+   experiences from the MASTER CV.
+3. State the availability: {{availability}}.
+4. Do not mention visa or work authorization unless the candidate's motivations do.
+5. No stock phrases ("I am writing to express my keen interest", "I am thrilled", "dynamic team", "perfect fit",
+   "To whom it may concern"…). Open with something specific to the company or the role.
+6. Greeting: "Dear Hiring Team," unless a contact name appears in the offer. Never invent a name.
+7. 250-350 words, 3-4 paragraphs, professional and natural. No signature block (it is added automatically);
+   sign_off is only the closing words (e.g. "Best regards,").
+8. "claims": list every factual statement about the candidate or the company with its source and the EXACT quote
+   (copied verbatim) from that source that supports it.
+{{motivation_rule}}
+CANDIDATE'S MOTIVATIONS (their own words)
+<<<MOTIVATIONS
+{{motivations}}
+MOTIVATIONS>>>
+{{guidance}}
+JOB OFFER
+<<<JOB
+{{job}}
+JOB>>>

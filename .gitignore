@@ -1,0 +1,37 @@
+# Dependencies & build output
+node_modules/
+dist/
+
+# Secrets & local config — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Local data: database, uploaded CVs, generated documents, logs
+data/
+generated/
+logs/
+*.db
+*.db-journal
+*.sqlite
+
+# Personal documents (safety net in case they are dropped in the repo root)
+*.pdf
+*.docx
+!tests/fixtures/**/*.pdf
+!tests/fixtures/**/*.docx
+
+# Browser automation profiles, cookies, sessions
+browser-profile/
+.playwright/
+playwright-report/
+test-results/
+cookies*.json
+storage-state*.json
+
+# Misc
+.DS_Store
+coverage/
+*.log
+tests/.tmp/
+ENCRYPTION_KEY-a-sauvegarder.txt
