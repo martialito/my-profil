@@ -50,7 +50,7 @@
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,magenta \"tsx watch --clear-screen=false src/server.ts\" \"vite\"",
     "build": "tsc -p . && vite build && tsup",
-    "start": "NODE_ENV=production node dist/server.js",
+    "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . && tsc -p .",
