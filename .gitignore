@@ -34,3 +34,4 @@ storage-state*.json
 coverage/
 *.log
 tests/.tmp/
+ENCRYPTION_KEY-a-sauvegarder.txt

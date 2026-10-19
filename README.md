@@ -32,6 +32,12 @@ Pas de `docker-compose` : avec SQLite, rien d'autre à lancer. Il sera ajouté s
 
 ## Installation
 
+**Windows, le plus simple** : téléchargez le projet (bouton *Code → Download ZIP* sur GitHub), décompressez-le,
+puis double-cliquez sur `start-windows.bat`. Il installe ce qui manque, crée la configuration, lance l'application
+et ouvre Chrome sur http://127.0.0.1:5173. Il faut seulement avoir installé Node.js (https://nodejs.org, version LTS).
+
+**Installation manuelle** :
+
 ```bash
 npm install
 cp .env.example .env
